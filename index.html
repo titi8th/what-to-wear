@@ -181,7 +181,7 @@ function load(){
   var closet=d.closet;
   if(!closet){closet={};DEFAULT_CLOSET.forEach(function(i){closet[i]=true;});}
   return {
-    closet:closet, sens:(typeof d.sens==='number'?d.sens:1), makeup:(d.makeup!==false), model:d.model||'f', look:d.look||'photo',
+    closet:closet, sens:(typeof d.sens==='number'?d.sens:1), makeup:(d.makeup!==false), model:d.model||'f', look:d.look||'photo', pkey:d.pkey||'',
     home:d.home||{name:'서울, 대한민국',lat:37.5665,lon:126.978},
     place:d.place||null, fb:d.fb||[], activity:d.activity||'work', custom:d.custom||[], plan:d.plan||null, day:null, acts:d.acts||[], addingAct:false,
     na:{label:'',base:'out',h0:9,h1:18,io:1}, actMsg:'',
@@ -193,7 +193,7 @@ var S=load();
 function registerCustom(){S.custom.forEach(function(c){NAME[c.id]=c.name;});}
 registerCustom();
 function save(){
-  try{localStorage.setItem(KEY,JSON.stringify({closet:S.closet,sens:S.sens,makeup:S.makeup,model:S.model,look:S.look,home:S.home,place:S.place,fb:S.fb,activity:S.activity,custom:S.custom,plan:S.plan,acts:S.acts}));}catch(e){}
+  try{localStorage.setItem(KEY,JSON.stringify({closet:S.closet,sens:S.sens,makeup:S.makeup,model:S.model,look:S.look,pkey:S.pkey,home:S.home,place:S.place,fb:S.fb,activity:S.activity,custom:S.custom,plan:S.plan,acts:S.acts}));}catch(e){}
 }
 var WARM={'아우터':['얇은 겉옷 (가디건급)','자켓 (트렌치·가죽급)','코트·패딩'],'상의':['얇음 (반팔·셔츠)','보통 (긴팔·맨투맨)','두꺼움 (니트)'],'하의':['얇음 (린넨·반바지)','보통 (청바지·슬랙스)','두꺼움 (기모)']};
 
@@ -837,25 +837,88 @@ function hashStr(t){var h=2166136261;for(var i=0;i<t.length;i++){h^=t.charCodeAt
 function photoUrl(prompt){
   return 'https://image.pollinations.ai/prompt/'+encodeURIComponent(prompt)+'?width=576&height=864&nologo=true&model=flux&seed='+hashStr(prompt);
 }
-var PHOTO={};   // url -> 'ok' | 'err'
-var PHOTO_TIMER={};
-document.addEventListener('load',function(e){var t=e.target;if(t&&t.classList&&t.classList.contains('ph')){var u=t.getAttribute('src');if(PHOTO[u]!=='ok'){PHOTO[u]='ok';clearTimeout(PHOTO_TIMER[u]);var w=t.parentNode.querySelector('.wait');if(w)w.hidden=true;}}},true);
-document.addEventListener('error',function(e){var t=e.target;if(t&&t.classList&&t.classList.contains('ph')){var u=t.getAttribute('src');PHOTO[u]='err';clearTimeout(PHOTO_TIMER[u]);render();}},true);
+/* 사진 불러오기
+   - 키 없이 쓰면 IP당 45초에 1장. 한 번에 하나만 요청하고, 45초 간격을 지킵니다.
+   - 만든 사진은 브라우저 캐시에 저장해 같은 코디는 다시 요청하지 않아요.
+   - 설정에 Pollinations 키를 넣으면 간격 없이 만듭니다. 키는 이 브라우저에만 저장돼요. */
+var PHOTO={};          // url -> {st:'ok'|'gen'|'wait'|'err', src}
+var WANT=null;         // 지금 화면에 필요한 사진 url
+var BUSY=false;
+var NEXT_AT=0;         // 다음 요청 가능 시각(ms)
+var GAP_MS=46000;
+var CACHE_NAME='wxfit-photos-v1';
+function genUrl(prompt){
+  var q='?width=576&height=864&nologo=true&model=flux&seed='+hashStr(prompt);
+  return S.pkey?'https://gen.pollinations.ai/image/'+encodeURIComponent(prompt)+q:'https://image.pollinations.ai/prompt/'+encodeURIComponent(prompt)+q;
+}
+function cacheGet(url){
+  try{ if(!window.caches) return Promise.resolve(null);
+    return caches.open(CACHE_NAME).then(function(c){return c.match(url);}).then(function(r){return r?r.blob():null;}).catch(function(){return null;});
+  }catch(e){return Promise.resolve(null);}
+}
+function cachePut(url,blob){
+  try{ if(window.caches) caches.open(CACHE_NAME).then(function(c){return c.put(url,new Response(blob,{headers:{'content-type':blob.type||'image/jpeg'}}));}).catch(function(){}); }catch(e){}
+}
+function setPhoto(url,st,src){PHOTO[url]={st:st,src:src||(PHOTO[url]&&PHOTO[url].src)||null};if(url===WANT&&S.tab==='today')render();}
+function want(url){
+  WANT=url;
+  if(PHOTO[url]&&(PHOTO[url].st==='ok'||PHOTO[url].st==='gen'||PHOTO[url].st==='err')) return;
+  if(!PHOTO[url]) PHOTO[url]={st:'wait'};
+  cacheGet(url).then(function(b){
+    if(b&&b.size>5000){PHOTO[url]={st:'ok',src:URL.createObjectURL(b)};if(url===WANT)render();}
+    else pump();
+  });
+}
+var tick=null;
+function pump(){
+  if(BUSY||!WANT) return;
+  var url=WANT;
+  if(PHOTO[url]&&(PHOTO[url].st==='ok'||PHOTO[url].st==='err')) return;
+  var waitMs=S.pkey?0:NEXT_AT-Date.now();
+  if(waitMs>0){
+    if(PHOTO[url].st!=='wait') setPhoto(url,'wait');
+    clearTimeout(tick); tick=setTimeout(pump,Math.min(waitMs,1000));
+    var el=document.getElementById('phCount'); if(el) el.textContent=Math.ceil(waitMs/1000);
+    return;
+  }
+  BUSY=true; setPhoto(url,'gen');
+  var headers={'Accept':'image/jpeg, application/json'};
+  if(S.pkey) headers['Authorization']='Bearer '+S.pkey;
+  var ctl=new AbortController(); var to=setTimeout(function(){ctl.abort();},90000);
+  fetch(url,{headers:headers,signal:ctl.signal}).then(function(res){
+    clearTimeout(to);
+    var ct=res.headers.get('content-type')||'';
+    if(res.status===402||res.status===429){
+      var ra=+(res.headers.get('retry-after')||45);
+      NEXT_AT=Date.now()+Math.max(5,ra)*1000+1000;
+      BUSY=false; setPhoto(url,'wait'); pump(); return;
+    }
+    if(!res.ok||ct.indexOf('image')<0) throw new Error('bad '+res.status);
+    return res.blob().then(function(b){
+      NEXT_AT=Date.now()+(S.pkey?0:GAP_MS);
+      cachePut(url,b);
+      BUSY=false; setPhoto(url,'ok',URL.createObjectURL(b)); pump();
+    });
+  }).catch(function(){
+    clearTimeout(to);
+    BUSY=false; NEXT_AT=Date.now()+(S.pkey?0:GAP_MS); setPhoto(url,'err'); pump();
+  });
+}
 function lookBox(items,ex,a){
   var h='<div class="look">';
   var mode=S.look;
-  var url=null;
-  if(mode==='photo'){url=photoUrl(photoPrompt(items,ex,a));}
-  if(mode==='photo'&&PHOTO[url]!=='err'){
-    if(!PHOTO[url]&&!PHOTO_TIMER[url]){
-      PHOTO_TIMER[url]=setTimeout(function(){if(!PHOTO[url]){PHOTO[url]='err';render();}},60000);
-    }
-    h+='<img class="ph" src="'+esc(url)+'" alt="'+esc(items.filter(function(i){return i.key!=='carry';}).map(function(i){return i.name;}).join(', '))+'을 입은 예시 사진">';
-    if(PHOTO[url]!=='ok') h+='<div class="wait" aria-live="polite">오늘 코디로 예시 사진을 만드는 중이에요<br>(10~30초 걸려요)</div>';
+  var url=null,st=null;
+  if(mode==='photo'){url=genUrl(photoPrompt(items,ex,a));want(url);st=PHOTO[url].st;}
+  if(mode==='photo'&&st==='ok'){
+    h+='<img class="ph" src="'+esc(PHOTO[url].src)+'" alt="'+esc(items.filter(function(i){return i.key!=='carry';}).map(function(i){return i.name;}).join(', '))+'을 입은 예시 사진">';
     h+='<span class="cap">AI로 만든 예시 사진 · 실제 내 옷과 색·모양이 다를 수 있어요</span>';
   } else {
     h+=figure(items,ex);
-    h+='<span class="cap">'+(mode==='photo'?'사진 서비스에 연결하지 못해 그림으로 보여드려요':'예시 그림 · 색은 옷 이름 기준이에요')+'</span>';
+    if(mode==='photo'){
+      if(st==='gen') h+='<span class="cap" aria-live="polite">이 코디로 예시 사진을 만드는 중이에요 (10~30초)</span>';
+      else if(st==='wait') h+='<span class="cap" aria-live="polite">무료 사진은 45초에 1장씩 만들어요. <b id="phCount">'+Math.max(1,Math.ceil((NEXT_AT-Date.now())/1000))+'</b>초 뒤 이 코디 사진을 만들게요.</span>';
+      else h+='<span class="cap">사진을 만들지 못해 그림으로 보여드려요.</span><button class="btn ghost" data-a="phRetry" style="min-height:40px">사진 다시 만들기</button>';
+    } else h+='<span class="cap">예시 그림 · 색은 옷 이름 기준이에요</span>';
   }
   h+='<div class="lseg" role="group" aria-label="예시 보기 방식"><button data-a="look" data-v="photo" aria-pressed="'+(mode==='photo')+'">사진</button><button data-a="look" data-v="draw" aria-pressed="'+(mode==='draw')+'">그림</button></div>';
   return h+'</div>';
@@ -1093,7 +1156,10 @@ function viewSet(){
       var bl='';BASES.forEach(function(b){if(b[0]===x.base)bl=b[1];});
       return '<div class="item"><div style="display:flex;flex-direction:column;min-width:0"><span class="name">'+esc(x.label)+'</span><span class="xs muted">'+x.h0+'시–'+x.h1+'시 · '+esc(bl)+' · '+IO[x.io].label+'</span></div><button class="iconbtn" data-a="actDel" data-v="'+esc(x.id)+'" aria-label="'+esc(x.label)+' 삭제">×</button></div>';
     }).join('')+'</div>':'<div class="small muted">오늘 탭의 "+ 활동 추가"로 골프, 학회 같은 활동을 등록할 수 있어요.</div>')+'</section>';
-  h+='<section class="card"><h2>예시 사진 모델</h2><div class="seg" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button data-a="model" data-v="f" aria-pressed="'+(S.model==='f')+'">여성</button><button data-a="model" data-v="m" aria-pressed="'+(S.model==='m')+'">남성</button></div><div class="xs muted">예시 사진은 옷 이름만 Pollinations.ai 이미지 생성 서비스로 보내 만들어요. 위치나 기록은 보내지 않아요.</div></section>';
+  h+='<section class="card"><h2>예시 사진 모델</h2><div class="seg" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button data-a="model" data-v="f" aria-pressed="'+(S.model==='f')+'">여성</button><button data-a="model" data-v="m" aria-pressed="'+(S.model==='m')+'">남성</button></div><div class="xs muted">예시 사진은 옷 이름만 Pollinations.ai 이미지 생성 서비스로 보내 만들어요. 위치나 기록은 보내지 않아요.</div>'+
+    '<div class="small muted">무료로는 45초에 1장씩 만들어요. <a href="https://enter.pollinations.ai" target="_blank" rel="noopener">enter.pollinations.ai</a>에서 무료 가입 후 받은 키를 넣으면 기다리지 않아요. 키는 이 휴대폰 브라우저에만 저장돼요.</div>'+
+    '<div class="search"><label for="pkey" style="position:absolute;left:-9999px">Pollinations 키</label><input id="pkey" type="password" autocomplete="off" placeholder="키 붙여넣기 (선택)" value="'+esc(S.pkey)+'"><button class="btn" data-a="pkeySave">저장</button></div>'+
+    (S.pkey?'<div class="chips"><span class="badge ok">키 사용 중</span><button class="btn ghost" data-a="pkeyClear">키 지우기</button></div>':'')+'</section>';
   h+='<section class="card"><div class="row"><h2>메이크업 팁 보기</h2><button class="chip" data-a="makeup" aria-pressed="'+S.makeup+'">'+(S.makeup?'켜짐':'꺼짐')+'</button></div></section>';
   h+='<section class="card"><h2>집(기준 도시)</h2><div class="small">지금: <b>'+esc(S.home.name)+'</b>. 300km 넘게 떠나 있으면 이 도시와 비교해 드려요.</div></section>';
   h+=pickerCard('home','기준 도시 바꾸기');
@@ -1136,6 +1202,9 @@ document.addEventListener('click',function(ev){
     case 'sens': S.sens=+v; save(); break;
     case 'makeup': S.makeup=!S.makeup; save(); break;
     case 'look': S.look=v; save(); break;
+    case 'phRetry': if(WANT&&PHOTO[WANT]) PHOTO[WANT].st='wait'; pump(); break;
+    case 'pkeySave': var kv=(document.getElementById('pkey')||{}).value||''; S.pkey=kv.trim(); save(); PHOTO={}; NEXT_AT=0; break;
+    case 'pkeyClear': S.pkey=''; save(); PHOTO={}; break;
     case 'model': S.model=v; save(); break;
     case 'rate': rate(v); break;
     case 'moment': moment(v); break;
