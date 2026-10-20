@@ -1,0 +1,965 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>오늘 뭐 입지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one phone-width column (max 480px). The hero card is the only bold surface and takes its color from the sky; everything else is quiet cards on a cool grey ground. */
+:root{
+  --bg:#EDF1F5; --surface:#FFFFFF; --sunk:#F1F4F8; --line:#D8E0E8;
+  --fg:#111A24; --muted:#4A5868; --accent:#1F4E9C; --accent-soft:#DCE7F7; --on-accent:#FFFFFF;
+  --must:#9A3412; --must-soft:#FFEDD5; --ok:#166534; --ok-soft:#DCFCE7;
+  --note-bg:#FEF3C7; --note-fg:#713F12;
+  --cold:#3B82F6; --fine:#94A3B8; --hot:#EA7A2C;
+  --sky-sun:#0F6E80; --sky-cloud:#46566A; --sky-rain:#1E3A7A; --sky-snow:#56677F; --sky-night:#26314A;
+  --on-sky:#FFFFFF; --on-sky-muted:#D8E6F2;
+  --font:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D131A; --surface:#161F29; --sunk:#1E2934; --line:#2A3745;
+  --fg:#E7EDF3; --muted:#A4B2C1; --accent:#8DB4F0; --accent-soft:#1D3150; --on-accent:#0D131A;
+  --must:#FDBA74; --must-soft:#3A2414; --ok:#86EFAC; --ok-soft:#13301E;
+  --note-bg:#3A3010; --note-fg:#FDE68A;
+  --sky-sun:#0B5764; --sky-cloud:#36455A; --sky-rain:#182F66; --sky-snow:#45556C; --sky-night:#1E2840;
+  color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0D131A; --surface:#161F29; --sunk:#1E2934; --line:#2A3745;
+  --fg:#E7EDF3; --muted:#A4B2C1; --accent:#8DB4F0; --accent-soft:#1D3150; --on-accent:#0D131A;
+  --must:#FDBA74; --must-soft:#3A2414; --ok:#86EFAC; --ok-soft:#13301E;
+  --note-bg:#3A3010; --note-fg:#FDE68A;
+  --sky-sun:#0B5764; --sky-cloud:#36455A; --sky-rain:#182F66; --sky-snow:#45556C; --sky-night:#1E2840;
+  color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:max(16px,env(safe-area-inset-top,0px)) max(40px,env(safe-area-inset-bottom,0px));}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.top .where{display:flex;flex-direction:column;min-width:0}
+.eyebrow{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.place{font-size:20px;font-weight:700;margin:0;overflow-wrap:anywhere;text-wrap:balance}
+.iconbtn{width:44px;height:44px;border-radius:22px;border:1px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;background:var(--sunk);border-radius:14px;padding:4px}
+.tab{min-height:44px;border:0;border-radius:10px;background:transparent;font-weight:600;font-size:14px;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.chip.soft[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.card{background:var(--surface);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.card h2{font-size:16px;font-weight:700;margin:0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.xs{font-size:12px}
+.hero{border-radius:20px;padding:20px;color:var(--on-sky);display:flex;flex-direction:column;gap:14px}
+.hero .big{font-family:var(--mono);font-size:56px;font-weight:600;line-height:1;letter-spacing:-1px}
+.hero .sub{color:var(--on-sky-muted);font-size:14px}
+.hero .label{color:var(--on-sky-muted);font-size:12px}
+.hero .val{font-family:var(--mono);font-size:16px;font-weight:600}
+.headline{background:var(--note-bg);color:var(--note-fg);border-radius:12px;padding:10px 12px;font-weight:700;font-size:15px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.stats div{display:flex;flex-direction:column;gap:2px}
+.hours{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.hour{flex:0 0 52px;display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--sunk);border-radius:12px;padding:8px 4px;font-size:12px}
+.hour b{font-family:var(--mono);font-size:14px}
+.hour .pp{color:var(--accent);font-family:var(--mono)}
+.seg{display:grid;gap:4px;background:var(--sunk);border-radius:12px;padding:4px}
+.seg button{min-height:44px;border:0;border-radius:10px;background:transparent;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.compare{display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);align-items:center;gap:8px}
+.cbox{background:var(--sunk);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.cbox.now{background:var(--accent-soft);color:var(--accent)}
+.cbox .t{font-family:var(--mono);font-size:18px;font-weight:600}
+.items{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.item .name{font-weight:700}
+.badge{font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px;white-space:nowrap}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.miss{background:var(--must-soft);color:var(--must)}
+.bring{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.b{border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px;background:var(--sunk)}
+.b.must{background:var(--accent-soft);color:var(--accent)}
+.b .bt{font-weight:700}
+.b .bn{font-size:12px;color:var(--muted)}
+.b.must .bn{color:var(--accent)}
+.planbox{background:var(--accent-soft);color:var(--accent);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.lines{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.bag{display:flex;gap:14px;align-items:center}
+.bagicon{width:52px;height:52px;border-radius:14px;background:var(--sunk);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.status{background:var(--surface);border-radius:14px;padding:12px 14px;font-size:14px;color:var(--muted)}
+.search{display:flex;gap:8px}
+.search input{flex:1;min-width:0;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:0 12px}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:0;background:var(--accent);color:var(--on-accent);font-weight:700}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
+.results{display:flex;flex-direction:column;gap:6px}
+.result{min-height:44px;text-align:left;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:8px 12px}
+.temps3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.temps3 button{min-height:80px;border-radius:14px;border:2px solid var(--line);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:700}
+.temps3 button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+.hist{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:4px}
+.hist span{height:28px;border-radius:4px;background:var(--sunk)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.foot{font-size:12px;color:var(--muted);text-align:center}
+.foot a{color:var(--accent)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<main class="app" id="app"></main>
+
+<script>
+(function(){
+'use strict';
+var KEY='wxfit.v1';
+
+/* ---------- 옷장 카탈로그 ---------- */
+var CATALOG=[
+ ['아우터',[['padding','패딩'],['lightpad','경량 패딩'],['wool','울 코트'],['trench','트렌치코트'],['blazer','블레이저'],['leather','가죽 자켓'],['denimjk','데님 자켓'],['fleecejk','플리스'],['cardigan','가디건'],['windbreaker','바람막이'],['rainjacket','발수 재킷']]],
+ ['상의',[['tee_s','반팔 티'],['tee_l','긴팔 티'],['thinturtle','얇은 목티'],['shirt','셔츠'],['linen','린넨 셔츠'],['knit','니트'],['vest','니트 조끼'],['turtle','두꺼운 터틀넥'],['sweat','맨투맨'],['hoodie','후드티'],['heattech','발열 내의'],['sporttee','기능성 티'],['rashguard','래시가드']]],
+ ['하의',[['slacks','슬랙스'],['jeans','청바지'],['cotton','면바지'],['skirt','스커트'],['fleece','기모 바지'],['shorts','반바지'],['training','트레이닝 바지'],['swim','수영복']]],
+ ['신발',[['loafer','로퍼'],['sneakers','운동화'],['boots','첼시부츠'],['rainboots','레인부츠'],['sandals','샌들'],['aqua','아쿠아슈즈']]],
+ ['소품',[['umbrella','접이식 우산'],['sunglass','선글라스'],['cap','모자'],['muffler','머플러'],['gloves','장갑'],['towel','비치타월']]]
+];
+var NAME={};
+CATALOG.forEach(function(c){c[1].forEach(function(p){NAME[p[0]]=p[1];});});
+var DEFAULT_CLOSET=['lightpad','wool','trench','blazer','cardigan','windbreaker','tee_s','tee_l','thinturtle','shirt','knit','turtle','sweat','hoodie','heattech','slacks','jeans','cotton','shorts','training','loafer','sneakers','boots','sandals','umbrella','sunglass','cap','muffler'];
+
+var ACT={
+ work:{label:'출근',win:[8,19],mod:0},
+ out:{label:'나들이',win:[10,20],mod:0},
+ sport:{label:'운동',win:[7,9],mod:5},
+ water:{label:'물놀이',win:[11,17],mod:0},
+ fish:{label:'낚시',win:[5,14],mod:-2},
+ trip:{label:'여행',win:[9,22],mod:0}
+};
+var ACT_ORDER=['work','out','sport','water','fish','trip'];
+/* 직접 추가한 활동: 가장 비슷한 기본 활동(base)의 옷 규칙을 쓰고, 시간대와 실내/실외만 따로 둡니다. */
+var BASES=[['work','출근처럼 단정하게'],['out','나들이처럼 편하게'],['sport','운동복'],['water','물놀이'],['fish','야외에 오래 (낚시·캠핑)'],['trip','여행·관광']];
+var IO=[{label:'주로 실내',v:2},{label:'반반',v:0},{label:'주로 실외',v:-1}];
+var PRESETS=[{label:'골프',base:'out',h0:7,h1:14,io:2},{label:'등산',base:'sport',h0:8,h1:15,io:2},{label:'학회',base:'work',h0:8,h1:18,io:0},{label:'캠핑',base:'fish',h0:14,h1:23,io:2},{label:'데이트',base:'out',h0:12,h1:22,io:1}];
+function customAct(){for(var i=0;i<S.acts.length;i++){if(S.acts[i].id===S.activity)return S.acts[i];}return null;}
+function K(){if(ACT[S.activity])return S.activity;var c=customAct();return c?c.base:'work';}
+function curAct(){
+  if(ACT[S.activity]) return ACT[S.activity];
+  var c=customAct();
+  if(!c) return ACT.work;
+  return {label:c.label,win:[c.h0,c.h1],mod:ACT[c.base].mod+IO[c.io].v};
+}
+var SENS=[{label:'추위를 타요',v:-2},{label:'보통이에요',v:0},{label:'더위를 타요',v:2}];
+var QUICK=[{name:'서울, 대한민국',lat:37.5665,lon:126.978},{name:'바르셀로나, 스페인',lat:41.3874,lon:2.1686},{name:'부산, 대한민국',lat:35.1796,lon:129.0756},{name:'도쿄, 일본',lat:35.6762,lon:139.6503}];
+
+/* ---------- 저장 ---------- */
+function load(){
+  var d={};
+  try{d=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){d={};}
+  var closet=d.closet;
+  if(!closet){closet={};DEFAULT_CLOSET.forEach(function(i){closet[i]=true;});}
+  return {
+    closet:closet, sens:(typeof d.sens==='number'?d.sens:1), makeup:(d.makeup!==false),
+    home:d.home||{name:'서울, 대한민국',lat:37.5665,lon:126.978},
+    place:d.place||null, fb:d.fb||[], activity:d.activity||'work', custom:d.custom||[], plan:d.plan||null, day:null, acts:d.acts||[], addingAct:false,
+    na:{label:'',base:'out',h0:9,h1:18,io:1}, actMsg:'',
+    tab:'today', opt:0, cmp:null, q:'', qMode:'place', results:[], searching:false, confirmReset:false,
+    newCat:'아우터', newWarm:2, newName:'', addMsg:''
+  };
+}
+var S=load();
+function registerCustom(){S.custom.forEach(function(c){NAME[c.id]=c.name;});}
+registerCustom();
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify({closet:S.closet,sens:S.sens,makeup:S.makeup,home:S.home,place:S.place,fb:S.fb,activity:S.activity,custom:S.custom,plan:S.plan,acts:S.acts}));}catch(e){}
+}
+var WARM={'아우터':['얇은 겉옷 (가디건급)','자켓 (트렌치·가죽급)','코트·패딩'],'상의':['얇음 (반팔·셔츠)','보통 (긴팔·맨투맨)','두꺼움 (니트)'],'하의':['얇음 (린넨·반바지)','보통 (청바지·슬랙스)','두꺼움 (기모)']};
+
+var W=null, HOMEW=null, AQ=null, status='', loading=false;
+
+/* ---------- 유틸 ---------- */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function avg(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:0;}
+function max(a){return a.length?Math.max.apply(null,a):0;}
+function min(a){return a.length?Math.min.apply(null,a):0;}
+function r(n){return Math.round(n);}
+function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
+function distKm(a,b){
+  var R=6371,toR=Math.PI/180;
+  var dLat=(b.lat-a.lat)*toR,dLon=(b.lon-a.lon)*toR;
+  var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*toR)*Math.cos(b.lat*toR)*Math.sin(dLon/2)*Math.sin(dLon/2);
+  return 2*R*Math.asin(Math.sqrt(x));
+}
+function shortName(n){return String(n||'').split(',')[0];}
+function wa(w){var c=w.charCodeAt(w.length-1);if(c<0xAC00||c>0xD7A3)return w+'와';return w+((c-0xAC00)%28?'과':'와');}
+function skyKind(code,isDay){
+  if(code==null) return 'cloud';
+  if(code>=71&&code<=77||code===85||code===86) return 'snow';
+  if(code>=51&&code<=67||code>=80&&code<=82||code>=95) return 'rain';
+  if(code===45||code===48||code===2||code===3) return 'cloud';
+  return isDay===0?'night':'sun';
+}
+function skyText(code){
+  var m={0:'맑음',1:'대체로 맑음',2:'구름 조금',3:'흐림',45:'안개',48:'안개',51:'약한 이슬비',53:'이슬비',55:'강한 이슬비',56:'어는 이슬비',57:'어는 이슬비',61:'약한 비',63:'비',65:'강한 비',66:'어는 비',67:'어는 비',71:'약한 눈',73:'눈',75:'많은 눈',77:'싸락눈',80:'소나기',81:'소나기',82:'강한 소나기',85:'눈 소나기',86:'눈 소나기',95:'뇌우',96:'우박 뇌우',99:'우박 뇌우'};
+  return m[code]||'—';
+}
+function icon(kind,size,color){
+  var s=size||24,c=color||'currentColor';
+  var head='<svg aria-hidden="true" width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="'+c+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">';
+  var cloud='<path d="M7 16a4 4 0 1 1 .9-7.9A5 5 0 0 1 17.5 10 3.5 3.5 0 0 1 17 17H7z"/>';
+  var body={
+    sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    night:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+    cloud:cloud,
+    rain:'<path d="M7 14a4 4 0 1 1 .9-7.9A5 5 0 0 1 17.5 8 3.5 3.5 0 0 1 17 15H7z"/><path d="M9 18l-1 2M13 18l-1 2M17 18l-1 2"/>',
+    snow:'<path d="M7 14a4 4 0 1 1 .9-7.9A5 5 0 0 1 17.5 8 3.5 3.5 0 0 1 17 15H7z"/><path d="M9 19h.01M13 19h.01M17 19h.01M11 21h.01M15 21h.01"/>',
+    pin:'<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+    locate:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/>',
+    arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+    tote:'<path d="M4 8h16l-1.5 12h-13z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+    cross:'<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M5 10L12 3l7 7"/><path d="M10 14h4"/>',
+    backpack:'<path d="M6 9a6 6 0 0 1 12 0v11H6z"/><path d="M9 3h6M9 14h6"/>'
+  }[kind]||cloud;
+  return head+body+'</svg>';
+}
+
+/* ---------- 네트워크 ---------- */
+function getJSON(u){return fetch(u).then(function(res){if(!res.ok) throw new Error(res.status); return res.json();});}
+function getWeather(lat,lon){
+  return getJSON('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+
+   '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day'+
+   '&hourly=temperature_2m,apparent_temperature,precipitation_probability,relative_humidity_2m,wind_speed_10m,uv_index,weather_code'+
+   '&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_probability_max,uv_index_max,sunset'+
+   '&past_days=1&forecast_days=3&timezone=auto&wind_speed_unit=ms');
+}
+function getAQ(lat,lon){
+  return getJSON('https://air-quality-api.open-meteo.com/v1/air-quality?latitude='+lat+'&longitude='+lon+'&hourly=pm2_5&timezone=auto&forecast_days=3');
+}
+function geocode(q){
+  return getJSON('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(q)+'&count=6&language=ko&format=json')
+   .then(function(j){return (j.results||[]).map(function(x){
+     return {name:[x.name,x.admin1&&x.admin1!==x.name?x.admin1:null,x.country].filter(Boolean).join(', '),lat:x.latitude,lon:x.longitude};
+   });});
+}
+function reverse(lat,lon){
+  return getJSON('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+lat+'&longitude='+lon+'&localityLanguage=ko')
+   .then(function(j){
+     // 행정구역을 큰 단위→작은 단위로 정렬하고, 도시 바로 아래 단계(구·district)를 이름으로 씁니다.
+     var adm=((j.localityInfo&&j.localityInfo.administrative)||[]).filter(function(x){return x&&x.name;})
+       .sort(function(x,y){return ((x.adminLevel||0)-(y.adminLevel||0))||((x.order||0)-(y.order||0));});
+     var city=j.city||'';
+     var ci=-1;
+     adm.forEach(function(x,i){if(city&&x.name===city)ci=i;});
+     var finer=ci>=0?adm.slice(ci+1):adm.filter(function(x){return (x.adminLevel||0)>=7;});
+     finer=finer.filter(function(x,i){return x.name!==city&&finer.map(function(y){return y.name;}).indexOf(x.name)===i;});
+     var district=finer[0]?finer[0].name:(j.locality&&j.locality!==city?j.locality:'');
+     var hood=finer[1]?finer[1].name:(j.locality&&j.locality!==city&&j.locality!==district?j.locality:'');
+     var name=[district,city||j.principalSubdivision].filter(Boolean).join(', ')||j.countryName||'';
+     return {name:name,hood:hood};
+   });
+}
+
+var loadToken=0;
+function loadPlace(pl){
+  S.place=pl; save(); S.cmp=null;
+  var my=++loadToken;
+  loading=true; status='날씨를 불러오는 중이에요…'; render();
+  getWeather(pl.lat,pl.lon).then(function(w){
+    if(my!==loadToken) return;
+    W=w; status=''; loading=false; render();
+  }).catch(function(){
+    if(my!==loadToken) return;
+    loading=false; status='날씨를 불러오지 못했어요. 인터넷 연결을 확인한 뒤 위쪽 위치 버튼을 눌러 다시 시도해 주세요.'; render();
+  });
+  AQ=null;
+  getAQ(pl.lat,pl.lon).then(function(a){if(my===loadToken){AQ=a;render();}}).catch(function(){});
+  HOMEW=null;
+  if(distKm(pl,S.home)>300){
+    getWeather(S.home.lat,S.home.lon).then(function(h){if(my===loadToken){HOMEW=h;render();}}).catch(function(){});
+  }
+}
+function locate(){
+  if(!navigator.geolocation){
+    status='이 브라우저는 위치를 지원하지 않아요. 아래에서 도시를 골라 주세요.'; render(); return;
+  }
+  status='현재 위치를 확인하는 중이에요…'; render();
+  navigator.geolocation.getCurrentPosition(function(p){
+    var lat=+p.coords.latitude.toFixed(3),lon=+p.coords.longitude.toFixed(3);
+    reverse(lat,lon).then(function(n){loadPlace({name:n.name||'현재 위치',hood:n.hood||'',lat:lat,lon:lon,gps:true});})
+     .catch(function(){loadPlace({name:'현재 위치',lat:lat,lon:lon,gps:true});});
+  },function(){
+    status=S.place?'위치 권한이 없어 마지막으로 본 장소의 날씨를 보여드려요.':'위치를 받을 수 없어요. 아래에서 도시를 골라 주세요.';
+    if(S.place&&!W) loadPlace(S.place); else render();
+  },{enableHighAccuracy:false,timeout:10000,maximumAge:600000});
+}
+
+/* ---------- 분석 ---------- */
+function fbOffset(){
+  var last=S.fb.slice(-10),sum=0;
+  last.forEach(function(e){if(e.rating==='cold')sum-=1;else if(e.rating==='hot')sum+=1;});
+  return clamp(Math.round(sum*0.7),-4,4);
+}
+function nowInfo(w){
+  var t=w.current.time;
+  return {date:t.slice(0,10),h:+t.slice(11,13)};
+}
+function analyze(forceToday){
+  var now=nowInfo(W);
+  var di=W.daily.time.indexOf(now.date);
+  if(di<0) di=1;
+  // evening = 내일 준비 화면. 직접 고르면 그대로, 아니면 저녁 7시부터 자동으로 내일.
+  var evening=!forceToday&&(S.day?S.day==='tomorrow':now.h>=19);
+  var t=evening?di+1:di;
+  if(t>=W.daily.time.length) t=W.daily.time.length-1;
+  var date=W.daily.time[t];
+  var A=curAct();
+  var h0=A.win[0],h1=A.win[1];
+  if(S.activity==='sport'&&!evening&&now.h>=6){h0=now.h;h1=Math.min(now.h+2,23);}
+  else if(!evening){h0=Math.max(h0,now.h);if(h0>h1)h0=h1;}
+  var idx=[];
+  W.hourly.time.forEach(function(tm,i){
+    if(tm.slice(0,10)===date){var h=+tm.slice(11,13);if(h>=h0&&h<=h1)idx.push(i);}
+  });
+  if(!idx.length){W.hourly.time.forEach(function(tm,i){if(tm.slice(0,10)===date)idx.push(i);});}
+  function H(k){return idx.map(function(i){var v=W.hourly[k][i];return v==null?0:v;});}
+  var feel=H('apparent_temperature'),pp=H('precipitation_probability'),hum=H('relative_humidity_2m'),wind=H('wind_speed_10m'),uv=H('uv_index'),code=H('weather_code');
+  var hours=idx.map(function(i){return +W.hourly.time[i].slice(11,13);});
+  var rainStart=null;
+  for(var k=0;k<pp.length;k++){if(pp[k]>=50){rainStart=hours[k];break;}}
+  var minFeel=min(feel),maxFeel=max(feel);
+  var minHour=hours[feel.indexOf(minFeel)];
+  var sunny=code.filter(function(c){return c<=1;}).length/(code.length||1);
+  var base=0.6*avg(feel)+0.4*minFeel;
+  var Tadj=base+A.mod+SENS[S.sens].v+fbOffset();
+  var pm=null;
+  if(AQ&&AQ.hourly&&AQ.hourly.time){
+    var vals=[];
+    AQ.hourly.time.forEach(function(tm,i){
+      if(tm.slice(0,10)===date){var h=+tm.slice(11,13);if(h>=h0&&h<=h1&&AQ.hourly.pm2_5[i]!=null)vals.push(AQ.hourly.pm2_5[i]);}
+    });
+    if(vals.length) pm=max(vals);
+  }
+  var snow=code.some(function(c){return c>=71&&c<=77||c===85||c===86;});
+  return {
+    t:t,date:date,evening:evening,forceToday:!!forceToday,now:now,h0:h0,h1:h1,
+    avgFeel:avg(feel),minFeel:minFeel,maxFeel:maxFeel,minHour:minHour,
+    maxPP:max(pp),rainStart:rainStart,wet:max(pp)>=50,snow:snow,
+    hum:avg(hum),wind:max(wind),uv:max(uv),sunny:sunny,pm:pm,
+    Tadj:Tadj,
+    dMax:W.daily.temperature_2m_max[t],dMin:W.daily.temperature_2m_min[t],dCode:W.daily.weather_code[t],
+    sunset:W.daily.sunset&&W.daily.sunset[t]?W.daily.sunset[t].slice(11,16):null
+  };
+}
+
+/* ---------- 코디 ---------- */
+function band(T){return T>=27?7:T>=23?6:T>=20?5:T>=17?4:T>=13?3:T>=9?2:T>=5?1:0;}
+var WORK=[
+ {outer:['padding','wool'],inner:['heattech'],base:['thinturtle','turtle','shirt'],top:['knit','vest'],bottom:['fleece','slacks'],shoes:['boots','loafer'],acc:['muffler','gloves']},
+ {outer:['wool','lightpad'],inner:['heattech'],base:['shirt','thinturtle'],top:['knit','vest'],bottom:['slacks','fleece'],shoes:['boots','loafer'],acc:['muffler']},
+ {outer:['trench','wool'],base:['shirt','thinturtle'],top:['knit','vest','cardigan'],bottom:['slacks'],shoes:['loafer','boots']},
+ {outer:['trench','blazer','leather'],base:['shirt','thinturtle'],top:['vest','cardigan','knit'],_opt:['top'],bottom:['slacks'],shoes:['loafer']},
+ {outer:['cardigan','blazer'],top:['shirt','thinturtle','tee_l'],bottom:['slacks'],shoes:['loafer']},
+ {top:['shirt','tee_l'],bottom:['slacks','cotton'],shoes:['loafer'],carry:['cardigan','blazer']},
+ {top:['shirt','tee_s'],bottom:['slacks','cotton'],shoes:['loafer','sneakers'],carry:['cardigan']},
+ {top:['linen','tee_s','shirt'],bottom:['cotton','slacks'],shoes:['loafer','sneakers']}
+];
+var CASUAL=[
+ {outer:['padding','wool'],inner:['heattech'],base:['thinturtle','tee_l'],top:['hoodie','knit','sweat'],bottom:['fleece','jeans'],shoes:['boots','sneakers'],acc:['muffler','gloves']},
+ {outer:['lightpad','wool'],inner:['heattech'],base:['thinturtle','tee_l'],top:['knit','sweat','hoodie'],bottom:['jeans','fleece'],shoes:['sneakers','boots'],acc:['muffler']},
+ {outer:['trench','leather','lightpad','wool'],base:['thinturtle','tee_l','shirt'],top:['knit','sweat','cardigan'],bottom:['jeans'],shoes:['sneakers']},
+ {outer:['leather','denimjk','trench','fleecejk','windbreaker'],base:['thinturtle','tee_l'],top:['cardigan','sweat','knit'],_opt:['top'],bottom:['jeans','cotton'],shoes:['sneakers']},
+ {outer:['cardigan','denimjk','fleecejk'],top:['thinturtle','tee_l','shirt'],bottom:['jeans','cotton'],shoes:['sneakers']},
+ {top:['tee_l','shirt','sweat'],bottom:['jeans','cotton'],shoes:['sneakers'],carry:['cardigan']},
+ {top:['tee_s','linen'],bottom:['cotton','jeans','skirt'],shoes:['sneakers','sandals']},
+ {top:['tee_s','linen'],bottom:['shorts','skirt','cotton'],shoes:['sandals','sneakers'],acc:['cap']}
+];
+function copySpec(o){var c={};Object.keys(o).forEach(function(k){c[k]=o[k].slice();});return c;}
+function specFor(T,a){
+  var b=band(T),act=K(),sp;
+  if(act==='work') sp=copySpec(WORK[b]);
+  else if(act==='sport'){
+    if(b>=5) sp={top:['sporttee','tee_s'],bottom:['shorts','training'],shoes:['sneakers']};
+    else if(b>=3) sp={outer:['windbreaker','hoodie'],top:['sporttee','tee_l'],bottom:['training'],shoes:['sneakers']};
+    else sp={outer:['windbreaker','lightpad'],inner:['heattech'],top:['hoodie','sporttee'],bottom:['training','fleece'],shoes:['sneakers']};
+    if(b<=1) sp.acc=['gloves'];
+  } else if(act==='water'){
+    var cover=b>=6?{top:['tee_s'],bottom:['shorts']}:copySpec(CASUAL[b]);
+    sp={swim:['swim'],guard:['rashguard'],top:cover.top,bottom:cover.bottom,shoes:['aqua','sandals'],acc:['towel']};
+    if(cover.base){sp.base=cover.base;sp._opt=['top'];}
+    if(cover.outer) sp.outer=cover.outer;
+  } else {
+    sp=copySpec(CASUAL[b]);
+    if(act==='trip'||act==='out'){sp.shoes=['sneakers'].concat(sp.shoes.filter(function(x){return x!=='sneakers';}));}
+    if(act==='fish'){
+      sp.outer=['windbreaker','rainjacket'].concat(sp.outer||[]);
+      sp.shoes=['rainboots','boots','sneakers'];
+      sp.acc=(sp.acc||[]).concat(['cap']);
+    }
+  }
+  return injectCustom(sp,b,a);
+}
+/* 사용자가 추가한 옷: 따뜻함 단계가 맞으면 카탈로그 옷과 하루씩 번갈아 추천 */
+var CAT_OF={outer:'아우터',carry:'아우터',base:'상의',top:'상의',bottom:'하의',shoes:'신발'};
+function wantWarm(part,b){
+  if(part==='outer') return b<=1?[3]:b===2?[3,2]:b===3?[2]:[1];
+  if(part==='carry') return [1];
+  if(part==='base') return b<=3?[1,2]:[1];
+  if(part==='top') return b<=1?[3]:b<=3?[2,3]:b<=5?[1,2]:[1];
+  if(part==='bottom') return b<=1?[3]:b<=4?[2]:b<=6?[2,1]:[1];
+  return null;
+}
+function injectCustom(sp,b,a){
+  if(!S.custom.length||K()==='sport'||K()==='water') return sp;
+  var day=a&&a.date?+a.date.slice(8,10):0;
+  Object.keys(sp).forEach(function(part){
+    var cat=CAT_OF[part]; if(!cat) return;
+    var ws=wantWarm(part,b);
+    var layered=part==='top'&&sp.base&&sp.base.length;
+    var mine=S.custom.filter(function(c){return S.closet[c.id]&&((c.cat===cat&&(!ws||ws.indexOf(c.warm)>=0))||(layered&&c.cat==='아우터'&&c.warm===1));}).map(function(c){return c.id;});
+    if(!mine.length) return;
+    if(part==='shoes'){sp[part]=sp[part].concat(mine);return;}
+    var cat0=null;
+    for(var i=0;i<sp[part].length;i++){if(S.closet[sp[part][i]]){cat0=sp[part][i];break;}}
+    var pool=cat0?[cat0].concat(mine):mine;
+    var k=day%pool.length;
+    pool=pool.slice(k).concat(pool.slice(0,k));
+    sp[part]=pool.concat(sp[part].filter(function(x){return pool.indexOf(x)<0;}));
+  });
+  return sp;
+}
+var PART_LABEL={outer:'아우터',inner:'이너',guard:'물놀이',swim:'물놀이',top:'상의',bottom:'하의',shoes:'신발',acc:'소품',carry:'들고 가기'};
+var PART_ORDER=['swim','guard','outer','top','base','inner','bottom','shoes','acc','carry'];
+function resolve(sp){
+  var out=[],used={};
+  var layered=!!(sp.base&&sp.base.length);
+  var opt=sp._opt||[];
+  PART_ORDER.forEach(function(p){
+    if(!sp[p]||!sp[p].length) return;
+    var ids=sp[p].filter(function(x){return !used[x];});
+    if(!ids.length) return;
+    var label=p==='top'&&layered?'상의 · 겉에':p==='base'?'상의 · 안에':PART_LABEL[p];
+    if(p==='acc'){
+      ids.forEach(function(id){used[id]=1;out.push({key:p,part:label,id:id,name:NAME[id],owned:!!S.closet[id]});});
+      return;
+    }
+    var pick=null;
+    for(var i=0;i<ids.length;i++){if(S.closet[ids[i]]){pick=ids[i];break;}}
+    if(pick){used[pick]=1;out.push({key:p,part:label,id:pick,name:NAME[pick],owned:true});}
+    else if(opt.indexOf(p)<0){used[ids[0]]=1;out.push({key:p,part:label,id:ids[0],name:NAME[ids[0]],owned:false});}
+  });
+  return out;
+}
+function josa(w,a,b){var c=w.charCodeAt(w.length-1);if(c<0xAC00||c>0xD7A3)return w+b;return w+((c-0xAC00)%28?a:b);}
+function layerTip(items){
+  var base=null,top=null,outer=null;
+  items.forEach(function(i){if(i.key==='base')base=i;if(i.key==='top')top=i;if(i.key==='outer')outer=i;});
+  if(!base||!top) return '';
+  var t=base.name+' 위에 '+josa(top.name,'을','를')+' 겹쳐 입으세요.';
+  if(K()==='work') t+=' 사무실이 더우면 '+top.name+'만 벗으면 돼요.';
+  else if(outer) t+=' 낮에 '+josa(outer.name,'을','를')+' 벗어도 두 겹이라 허전하지 않아요.';
+  return t;
+}
+function outfits(a){
+  var opts=[];
+  var baseSpec=specFor(a.Tadj,a);
+  opts.push({label:'기본',desc:baseDesc(a),items:resolve(baseSpec)});
+  if(a.wet||a.snow||a.wind>=8){
+    var s2=specFor(a.Tadj-1,a);
+    if(a.wet||a.snow){
+      if(s2.outer){ s2.outer=(K()==='work'?['trench','rainjacket']:['rainjacket','windbreaker']).concat(s2.outer); }
+      else s2.carry=['rainjacket','windbreaker'];
+      if(K()!=='water'&&K()!=='sport') s2.shoes=(K()==='work'?['boots','rainboots']:['rainboots','boots']).concat(s2.shoes||[]);
+    } else {
+      if(s2.outer) s2.outer=['windbreaker'].concat(s2.outer); else s2.carry=['windbreaker'];
+    }
+    var why=a.snow?'눈':a.wet?'비':'바람';
+    opts.push({label:why+' 대비',desc:(a.wet||a.snow)?why+' 오는 시간을 생각한 조합이에요. 바짓단은 발목 위로, 신발은 물이 덜 스미는 것으로.':'바람이 '+r(a.wind)+'m/s까지 불어요. 바람을 막는 겉옷이 핵심이에요.',items:resolve(s2)});
+  } else {
+    opts.push({label:'가볍게',desc:'더위를 타거나 많이 움직일 날을 위한 한 단계 가벼운 조합이에요.',items:resolve(specFor(a.Tadj+3,a))});
+  }
+  opts.push({label:'따뜻하게',desc:'추위를 타거나 바깥에 오래 있을 날을 위한 한 단계 따뜻한 조합이에요.',items:resolve(specFor(a.Tadj-3,a))});
+  return opts;
+}
+function baseDesc(a){
+  var parts=[];
+  var range=a.maxFeel-a.minFeel;
+  if(range>=8) parts.push('일교차가 '+r(range)+'°로 커요. 벗고 입기 쉬운 겹쳐 입기로.');
+  if(K()==='work'&&a.Tadj<20) parts.push('실내는 따뜻하니 안쪽은 가볍게.');
+  if(K()==='sport') parts.push('움직이면 체온이 올라가니 시작할 땐 약간 쌀쌀한 정도가 맞아요.');
+  if(K()==='fish') parts.push('물가는 바람이 세고 오래 서 있어 실제보다 춥게 느껴져요.');
+  if(K()==='water') parts.push('물에서 나온 뒤 걸칠 옷까지 챙기세요.');
+  if(!parts.length) parts.push('체감 '+r(a.avgFeel)+'° 기준, 지금 옷장에서 고른 조합이에요.');
+  return parts.join(' ');
+}
+function summary(items){
+  return items.filter(function(i){return ['outer','top','base','bottom'].indexOf(i.key)>=0;}).map(function(i){return i.name;}).join(' + ');
+}
+
+/* ---------- 챙길 것 / 메이크업 / 가방 ---------- */
+function bring(a){
+  var L=[];
+  if(a.maxPP>=60) L.push({k:'umbrella',name:'우산',level:'must',note:(a.rainStart!=null?a.rainStart+'시부터 비 · ':'')+'강수확률 '+r(a.maxPP)+'%'});
+  else if(a.maxPP>=30) L.push({k:'umbrella',name:'우산',level:'maybe',note:'강수확률 '+r(a.maxPP)+'% · 접이식으로'});
+  else L.push({k:'umbrella',name:'우산',level:'no',note:'강수확률 '+r(a.maxPP)+'%'});
+  if(a.uv>=6||(a.uv>=3&&a.sunny>=0.5)) L.push({k:'sunglass',name:'선글라스',level:'must',note:'자외선 '+uvText(a.uv)+(a.sunny>=0.5?' · 맑음':'')});
+  else if(a.uv>=3) L.push({k:'sunglass',name:'선글라스',level:'maybe',note:'자외선 '+uvText(a.uv)+' · 구름 많음'});
+  else L.push({k:'sunglass',name:'선글라스',level:'no',note:'자외선 '+uvText(a.uv)});
+  if(a.uv>=3) L.push({k:'spf',name:'선크림',level:'must',note:a.uv>=6?'SPF 50 · 덧바르기':'SPF 30이면 충분'});
+  var range=a.maxFeel-a.minFeel;
+  if(range>=8&&a.minFeel<20) L.push({k:'layer',name:'얇은 겉옷',level:'must',note:a.minHour+'시엔 체감 '+r(a.minFeel)+'°'});
+  if(a.pm!=null){
+    if(a.pm>=36) L.push({k:'mask',name:'마스크',level:'must',note:'초미세먼지 나쁨'});
+    else if(a.pm>=16) L.push({k:'mask',name:'마스크',level:'maybe',note:'초미세먼지 보통'});
+  }
+  if(a.Tadj<5) L.push({k:'warm',name:'장갑·머플러',level:'must',note:'체감 '+r(a.minFeel)+'°까지'});
+  if(K()==='sport'||K()==='water'||K()==='fish'||a.maxFeel>=28) L.push({k:'water',name:'물',level:'must',note:a.maxFeel>=28?'체감 '+r(a.maxFeel)+'°':'수분 보충'});
+  if(K()==='water') L.push({k:'dry',name:'방수팩',level:'must',note:'휴대폰 보호'});
+  if(K()==='fish') L.push({k:'cap',name:'모자',level:'must',note:'햇볕과 바람 막기'});
+  if(a.wind>=8&&K()!=='fish') L.push({k:'hair',name:'헤어 고정',level:'maybe',note:'바람 '+r(a.wind)+'m/s'});
+  var rank={must:0,maybe:1,no:2};
+  L.sort(function(x,y){return rank[x.level]-rank[y.level];});
+  return L.slice(0,6);
+}
+function uvText(u){return u>=8?'매우 높음':u>=6?'높음':u>=3?'보통':'낮음';}
+function levelText(l){return l==='must'?'꼭':l==='maybe'?'있으면 좋음':'필요 없음';}
+function makeup(a){
+  if(!S.makeup) return [];
+  var L=[];
+  if(a.hum>=70) L.push(['베이스','매트 쿠션을 얇게, 파우더로 마무리. 습도 '+r(a.hum)+'%라 광이 번들거림으로 보여요.']);
+  else if(a.hum<=45) L.push(['베이스','수분 프라이머와 촉촉한 쿠션. 습도 '+r(a.hum)+'%로 건조해요.']);
+  else L.push(['베이스','세미 매트로 무난하게. 습도 '+r(a.hum)+'%.']);
+  if(a.wet||a.snow||K()==='water'||K()==='sport') L.push(['눈','워터프루프 마스카라와 아이라이너.']);
+  if(a.uv>=3) L.push(['선크림',a.uv>=6?'SPF 50, 점심 때 한 번 덧바르기.':'SPF 30 이상.']);
+  if(a.maxFeel>=27) L.push(['고정','땀 대비 픽서 미스트.']);
+  if(a.Tadj<5) L.push(['보습','크림을 한 겹 더, 립밤 필수.']);
+  if(a.hum>=70) L.push(['파우치','기름종이, 파우더 팩트.']);
+  else if(a.hum<=45) L.push(['파우치','미스트, 립밤.']);
+  return L;
+}
+function bagFor(a,B,items,away){
+  var base={work:['노트북','지갑','휴대폰'],out:['지갑','휴대폰'],sport:['물','수건','휴대폰'],water:['비치타월','방수팩','갈아입을 옷'],fish:['물','간식','보조배터리'],trip:['여권·신분증','지갑','보조배터리']}[K()].slice();
+  B.forEach(function(b){if(b.level==='must'&&['water','dry'].indexOf(b.k)<0) base.push(b.name);});
+  items.forEach(function(i){if(i.part==='들고 가기') base.push(i.name);});
+  var uniq=base.filter(function(x,i){return base.indexOf(x)===i;});
+  var name,ic='tote',note='';
+  switch(K()){
+    case 'work': name=a.wet||a.snow?'입구가 닫히는 토트백':'토트백 또는 서류가방'; break;
+    case 'out': name=uniq.length>4?'넉넉한 에코백':'크로스백'; ic=uniq.length>4?'tote':'cross'; break;
+    case 'sport': name='작은 백팩'; ic='backpack'; break;
+    case 'water': name='방수 비치백'; break;
+    case 'fish': name='방수 백팩'; ic='backpack'; break;
+    default: name=away?'지퍼 크로스백, 몸 앞쪽으로':'지퍼 크로스백'; ic='cross'; if(away) note=' 관광지에서는 소매치기에 주의하세요.';
+  }
+  return {name:name,ic:ic,text:uniq.join(', ')+(uniq.length>5?' 정도가 들어가는 크기로.':'이 들어가면 충분해요.')+note};
+}
+
+/* ---------- 비교 ---------- */
+function compareInfo(a){
+  var away=!!HOMEW;
+  var mode=S.cmp||(away?'home':'prev');
+  if(!away) mode='prev';
+  var prevWord=a.evening?'오늘':'어제';
+  var targetWord=a.evening?'내일':'오늘';
+  if(mode==='home'){
+    var hn=nowInfo(HOMEW);
+    var hi=HOMEW.daily.time.indexOf(a.date);
+    if(hi<0) hi=HOMEW.daily.time.indexOf(hn.date);
+    if(hi<0) hi=1;
+    var hMax=HOMEW.daily.temperature_2m_max[hi],hMin=HOMEW.daily.temperature_2m_min[hi];
+    var d=r(a.dMax-hMax);
+    var hHum=avg(HOMEW.hourly.relative_humidity_2m.filter(function(v,i){return HOMEW.hourly.time[i].slice(0,10)===HOMEW.daily.time[hi]&&v!=null;}));
+    var humNote='';
+    if(a.hum-hHum<=-20) humNote=' 훨씬 건조해요';
+    else if(a.hum-hHum>=20) humNote=' 훨씬 습해요';
+    var hname=shortName(S.home.name);
+    var head=Math.abs(d)<2?wa(hname)+' 기온이 비슷해요':hname+'보다 '+Math.abs(d)+'° '+(d>0?'따뜻해요':'쌀쌀해요');
+    if(humNote) head+=','+humNote;
+    var advice=d>=4?hname+'에서 입던 두꺼운 겉옷은 두고, 한 겹 가볍게 입으세요.':d<=-4?hname+'보다 추워요. 한 겹 더 입으세요.':hname+'에서 입던 옷차림 그대로 괜찮아요.';
+    return {away:true,mode:mode,head:head,advice:advice,
+      left:{label:targetWord+' '+hname,t:r(hMax)+'° / '+r(hMin)+'°',note:skyText(HOMEW.daily.weather_code[hi])},
+      right:{label:targetWord+' '+shortName(S.place.name),t:r(a.dMax)+'° / '+r(a.dMin)+'°',note:skyText(a.dCode)}};
+  }
+  var p=a.t-1;
+  var pMax=W.daily.temperature_2m_max[p],pMin=W.daily.temperature_2m_min[p];
+  var dd=r(a.dMax-pMax);
+  var head2=(a.evening?'내일은 ':'')+(Math.abs(dd)<2?wa(prevWord)+' 기온이 비슷해요':prevWord+'보다 '+Math.abs(dd)+'° '+(dd>0?'높아요':'낮아요'));
+  var prevDate=W.daily.time[p];
+  var fbPrev=null;
+  S.fb.forEach(function(e){if(e.date===prevDate)fbPrev=e;});
+  var adv=dd<=-3?prevWord+' 옷에 한 겹 더 입으세요.':dd>=3?prevWord+' 옷에서 한 겹 덜어내세요.':wa(prevWord)+' 비슷하게 입으면 돼요.';
+  if(fbPrev){
+    var rt={cold:'추웠어요',ok:'적당했어요',hot:'더웠어요'}[fbPrev.rating];
+    adv+=' '+prevWord+' 저녁 "'+rt+'"를 누르셔서 그 기준으로 맞췄어요.';
+    if(fbPrev.outfit) adv+=' ('+prevWord+' 입은 옷: '+fbPrev.outfit+')';
+  }
+  return {away:away,mode:'prev',head:head2,advice:adv,
+    left:{label:prevWord,t:r(pMax)+'° / '+r(pMin)+'°',note:skyText(W.daily.weather_code[p])},
+    right:{label:targetWord,t:r(a.dMax)+'° / '+r(a.dMin)+'°',note:skyText(a.dCode)}};
+}
+
+/* ---------- 렌더 ---------- */
+var root=document.getElementById('app');
+function render(){
+  var html='';
+  var placeName=S.place?S.place.name:'위치를 정해 주세요';
+  var away=S.place&&distKm(S.place,S.home)>300;
+  html+='<header class="top"><div class="where"><div class="eyebrow">'+icon('pin',14)+(S.place&&S.place.gps?'현재 위치'+(S.place.hood?' · '+esc(S.place.hood)+' 근처':''):'선택한 장소')+(W?' · '+W.current.time.slice(11,16)+' 현지':'')+'</div>'+
+        '<h1 class="place">'+esc(placeName)+'</h1></div>'+
+        '<button class="iconbtn" data-a="locate" aria-label="현재 위치 다시 찾기">'+icon('locate',20)+'</button></header>';
+  var tabs=[['today','오늘'],['closet','옷장'],['fb','피드백'],['set','설정']];
+  html+='<nav class="tabs" role="tablist">'+tabs.map(function(t){return '<button class="tab" role="tab" data-a="tab" data-v="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'">'+t[1]+'</button>';}).join('')+'</nav>';
+  if(status) html+='<div class="status" role="status">'+esc(status)+'</div>';
+  if(S.tab==='today') html+=viewToday(away);
+  else if(S.tab==='closet') html+=viewCloset();
+  else if(S.tab==='fb') html+=viewFb();
+  else html+=viewSet();
+  html+='<p class="foot">날씨 데이터 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0) · 위치 이름 BigDataCloud · 프로토타입</p>';
+  root.innerHTML=html;
+}
+function pickerCard(mode,title){
+  var h='<section class="card"><h2>'+esc(title)+'</h2>';
+  h+='<form class="search" data-form="search" data-mode="'+mode+'"><label class="small muted" for="q-'+mode+'" style="position:absolute;left:-9999px">도시 이름</label><input id="q-'+mode+'" name="q" placeholder="도시 이름 (예: 오사카, Paris)" value="'+esc(S.qMode===mode?S.q:'')+'" autocomplete="off"><button class="btn" type="submit">검색</button></form>';
+  if(S.qMode===mode&&S.searching) h+='<div class="small muted">찾는 중…</div>';
+  if(S.qMode===mode&&S.results.length){
+    h+='<div class="results">'+S.results.map(function(x,i){return '<button class="result" data-a="pickResult" data-mode="'+mode+'" data-i="'+i+'">'+esc(x.name)+'</button>';}).join('')+'</div>';
+  } else if(S.qMode===mode&&S.results.noHit){
+    h+='<div class="small muted">검색 결과가 없어요. 영문 이름으로도 찾아보세요.</div>';
+  }
+  h+='<div class="chips">'+QUICK.map(function(x,i){return '<button class="chip" data-a="quick" data-mode="'+mode+'" data-i="'+i+'">'+esc(shortName(x.name))+'</button>';}).join('')+'</div>';
+  return h+'</section>';
+}
+function actForm(){
+  var n=S.na;
+  function hourSel(id,val,lab){
+    var o='';for(var i=0;i<24;i++){o+='<option value="'+i+'"'+(i===val?' selected':'')+'>'+i+'시</option>';}
+    return '<select id="'+id+'" aria-label="'+lab+'" style="min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:0 10px">'+o+'</select>';
+  }
+  var h='<section class="card"><h2>활동 추가하기</h2>';
+  h+='<div class="small muted">자주 가는 곳을 등록해 두면 그 시간대 날씨로 추천해요. 예시를 누르면 채워져요.</div>';
+  h+='<div class="chips">'+PRESETS.map(function(p,i){return '<button class="chip soft" data-a="preset" data-v="'+i+'">'+p.label+'</button>';}).join('')+'</div>';
+  h+='<label class="small muted" for="actName">이름</label><input id="actName" maxlength="12" placeholder="예: 골프, 학회, 등산" value="'+esc(n.label)+'" autocomplete="off" style="min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:0 12px">';
+  h+='<div class="small muted">어떤 옷차림인가요?</div><div class="chips">'+BASES.map(function(b){return '<button class="chip soft" data-a="naBase" data-v="'+b[0]+'" aria-pressed="'+(n.base===b[0])+'">'+b[1]+'</button>';}).join('')+'</div>';
+  h+='<div class="small muted">시간대</div><div class="chips" style="align-items:center">'+hourSel('naH0',n.h0,'시작 시각')+'<span>부터</span>'+hourSel('naH1',n.h1,'끝나는 시각')+'<span>까지</span></div>';
+  h+='<div class="small muted">어디에 더 오래 있나요?</div><div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+IO.map(function(x,i){return '<button data-a="naIO" data-v="'+i+'" aria-pressed="'+(n.io===i)+'">'+x.label+'</button>';}).join('')+'</div>';
+  if(S.actMsg) h+='<div class="small" role="status" style="color:var(--must)">'+esc(S.actMsg)+'</div>';
+  h+='<div class="chips"><button class="btn" data-a="actSave">추가</button><button class="btn ghost" data-a="actCancel">닫기</button></div>';
+  return h+'</section>';
+}
+function viewToday(away){
+  var h='';
+  h+='<div class="chips" role="group" aria-label="오늘 어디 가세요">'+ACT_ORDER.map(function(k){return '<button class="chip" data-a="act" data-v="'+k+'" aria-pressed="'+(S.activity===k)+'">'+ACT[k].label+'</button>';}).join('')+
+     S.acts.map(function(x){return '<button class="chip" data-a="act" data-v="'+esc(x.id)+'" aria-pressed="'+(S.activity===x.id)+'">'+esc(x.label)+'</button>';}).join('')+
+     '<button class="chip" data-a="actAdd" aria-expanded="'+S.addingAct+'" style="border-style:dashed">+ 활동 추가</button></div>';
+  if(S.addingAct) h+=actForm();
+  if(!W){
+    if(!loading) h+=pickerCard('place','어디 날씨로 볼까요?');
+    return h;
+  }
+  var a=analyze(false);
+  var cmp=compareInfo(a);
+  var dTo=W.daily.time[a.evening?a.t-1:a.t],dTm=W.daily.time[a.evening?a.t:a.t+1];
+  function md(s){return s?(+s.slice(5,7))+'/'+(+s.slice(8,10)):'';}
+  h+='<div class="seg" role="group" aria-label="언제 입을 옷인가요" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+
+     '<button data-a="day" data-v="today" aria-pressed="'+(!a.evening)+'">오늘 '+md(dTo)+'</button>'+
+     '<button data-a="day" data-v="tomorrow" aria-pressed="'+a.evening+'">내일 '+md(dTm)+' 미리 정하기</button></div>';
+  var kind=a.evening?skyKind(a.dCode,1):skyKind(W.current.weather_code,W.current.is_day);
+  var bg={sun:'--sky-sun',cloud:'--sky-cloud',rain:'--sky-rain',snow:'--sky-snow',night:'--sky-night'}[kind];
+  var headline=cmp.head;
+  if(a.wet&&a.rainStart!=null) headline+=', '+a.rainStart+'시부터 '+(a.snow?'눈':'비')+' 소식';
+  else if(a.snow) headline+=', 눈 소식';
+  h+='<section class="hero" style="background:var('+bg+')">';
+  h+='<div class="row" style="align-items:flex-start"><div style="display:flex;flex-direction:column;gap:4px">';
+  if(a.evening){
+    h+='<div class="label">내일 '+esc(curAct().label)+' 준비 · '+a.date.slice(5).replace('-','/')+'</div><div class="big">'+r(a.dMax)+'°</div><div class="sub">최저 '+r(a.dMin)+'° · '+skyText(a.dCode)+'</div>';
+  } else {
+    h+='<div class="label">지금 · '+skyText(W.current.weather_code)+'</div><div class="big">'+r(W.current.temperature_2m)+'°</div><div class="sub">체감 '+r(W.current.apparent_temperature)+'° · 최고 '+r(a.dMax)+'° / 최저 '+r(a.dMin)+'°</div>';
+  }
+  h+='</div>'+icon(kind,64,'var(--on-sky-muted)')+'</div>';
+  h+='<div class="headline">'+esc(headline)+'</div>';
+  h+='<div class="stats">'+
+     '<div><span class="label">강수확률</span><span class="val">'+r(a.maxPP)+'%</span></div>'+
+     '<div><span class="label">습도</span><span class="val">'+r(a.hum)+'%</span></div>'+
+     '<div><span class="label">바람</span><span class="val">'+r(a.wind)+'m/s</span></div>'+
+     '<div><span class="label">'+(a.pm!=null?'초미세먼지':'자외선')+'</span><span class="val">'+(a.pm!=null?r(a.pm):uvText(a.uv))+'</span></div></div>';
+  h+='<div class="label">'+String(a.h0).padStart(2,'0')+'시–'+String(a.h1).padStart(2,'0')+'시 '+esc(curAct().label)+' 시간대 기준'+(a.sunset?' · 일몰 '+a.sunset:'')+'</div>';
+  h+='</section>';
+
+  // 시간대별
+  var ni=W.hourly.time.indexOf(W.current.time.slice(0,13)+':00');
+  if(ni<0) ni=0;
+  var hrs='';
+  for(var i=ni;i<Math.min(ni+12,W.hourly.time.length);i++){
+    var hh=W.hourly.time[i].slice(11,13);
+    var hk=skyKind(W.hourly.weather_code[i],(+hh>=6&&+hh<19)?1:0);
+    hrs+='<div class="hour"><span>'+hh+'시</span>'+icon(hk,20)+'<b>'+r(W.hourly.temperature_2m[i])+'°</b><span class="pp">'+r(W.hourly.precipitation_probability[i]||0)+'%</span></div>';
+  }
+  h+='<section class="card"><h2>앞으로 12시간</h2><div class="hours">'+hrs+'</div></section>';
+
+  // 비교
+  h+='<section class="card"><h2>'+(cmp.away?'무엇과 비교할까요?':'어제와 비교')+'</h2>';
+  if(cmp.away){
+    var cur=S.cmp||'home';
+    h+='<div class="seg" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button data-a="cmp" data-v="home" aria-pressed="'+(cur==='home')+'">떠나온 '+esc(shortName(S.home.name))+'</button><button data-a="cmp" data-v="prev" aria-pressed="'+(cur==='prev')+'">어제 이곳</button></div>';
+  }
+  h+='<div class="compare"><div class="cbox"><span class="xs muted">'+esc(cmp.left.label)+'</span><span class="t">'+cmp.left.t+'</span><span class="xs muted">'+esc(cmp.left.note)+'</span></div>'+icon('arrow',20,'var(--muted)')+
+     '<div class="cbox now"><span class="xs">'+esc(cmp.right.label)+'</span><span class="t">'+cmp.right.t+'</span><span class="xs">'+esc(cmp.right.note)+'</span></div></div>';
+  h+='<div class="small">'+esc(cmp.advice)+'</div></section>';
+
+  // 코디
+  var opts=outfits(a);
+  if(S.opt>=opts.length) S.opt=0;
+  var o=opts[S.opt];
+  h+='<section class="card"><h2>'+(a.evening?'내일의':'오늘의')+' 코디</h2>';
+  h+='<div class="seg" style="grid-template-columns:repeat('+opts.length+',minmax(0,1fr))">'+opts.map(function(x,i){return '<button data-a="opt" data-v="'+i+'" aria-pressed="'+(S.opt===i)+'">'+esc(x.label)+'</button>';}).join('')+'</div>';
+  var P=S.plan;
+  if(P&&P.date===a.date&&P.activity===S.activity){
+    var changes=[];
+    if(Math.abs(a.dMax-P.dMax)>=2) changes.push('최고기온 '+r(P.dMax)+'° → '+r(a.dMax)+'°');
+    if((P.maxPP>=50)!==(a.maxPP>=50)) changes.push('강수확률 '+r(P.maxPP)+'% → '+r(a.maxPP)+'%');
+    var when=P.setOn<a.date?(P.setH>=17?'어젯밤':'전날'):'오늘';
+    h+='<div class="planbox"><span class="xs">'+when+' '+(+P.setH)+'시에 정해 둔 코디 · '+esc(P.label)+'</span><b>'+esc(P.summary)+'</b>'+
+       '<span class="small">'+(changes.length?'그 사이 예보가 바뀌었어요: '+esc(changes.join(', '))+'. 아래 추천을 다시 확인해 보세요.':'예보가 그대로예요. 정한 대로 입으시면 돼요.')+'</span></div>';
+  }
+  h+='<div class="small">'+esc(o.desc)+'</div><div class="items">';
+  o.items.forEach(function(it){
+    h+='<div class="item"><div style="display:flex;flex-direction:column;min-width:0"><span class="xs muted">'+esc(it.part)+'</span><span class="name">'+esc(it.name)+'</span></div>'+
+       (it.owned?'<span class="badge ok">내 옷장 ✓</span>':'<span class="badge miss">옷장에 없음</span>')+'</div>';
+  });
+  h+='</div>';
+  var tip=layerTip(o.items);
+  if(tip) h+='<div class="small" style="color:var(--accent)">'+esc(tip)+'</div>';
+  var missing=o.items.filter(function(x){return !x.owned;});
+  if(missing.length) h+='<div class="xs muted">옷장에 없는 아이템은 옷장 탭에서 있다고 표시하면 바로 반영돼요.</div>';
+  var isPlanned=P&&P.date===a.date&&P.activity===S.activity&&P.label===o.label;
+  h+='<div class="chips">'+(isPlanned?
+     '<button class="btn ghost" data-a="unplan">정해 둔 코디예요 · 취소</button>':
+     '<button class="btn" data-a="plan">'+(a.evening?'내일은 이걸로 정하기':'오늘은 이걸로 정하기')+'</button>')+'</div>';
+  h+='</section>';
+
+  // 챙길 것
+  var B=bring(a);
+  h+='<section class="card"><h2>챙길 것</h2><div class="bring">'+B.map(function(b){
+    return '<div class="b '+(b.level==='must'?'must':'')+'"><span class="bt">'+esc(b.name)+' · '+levelText(b.level)+'</span><span class="bn">'+esc(b.note)+'</span></div>';
+  }).join('')+'</div></section>';
+
+  // 메이크업
+  var M=makeup(a);
+  if(M.length){
+    h+='<section class="card"><div class="row"><h2>메이크업</h2><span class="badge '+(a.hum>=70?'miss':'ok')+'">습도 '+r(a.hum)+'%</span></div><ul class="lines">'+
+       M.map(function(m){return '<li><b>'+esc(m[0])+'</b> · '+esc(m[1])+'</li>';}).join('')+'</ul></section>';
+  }
+
+  // 가방
+  var bg2=bagFor(a,B,o.items,away);
+  h+='<section class="card"><div class="bag"><div class="bagicon">'+icon(bg2.ic,28)+'</div><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="xs muted">'+(a.evening?'내일의':'오늘의')+' 가방</span><span style="font-weight:700">'+esc(bg2.name)+'</span><span class="small">'+esc(bg2.text)+'</span></div></div></section>';
+
+  var off=fbOffset()+SENS[S.sens].v;
+  if(off!==0) h+='<p class="xs muted" style="margin:0">추천은 실제 체감보다 '+Math.abs(off)+'° '+(off<0?'춥게':'덥게')+' 잡았어요 (설정·피드백 반영).</p>';
+  return h;
+}
+function viewCloset(){
+  var h='<section class="card"><h2>내 옷장에 있는 것만 눌러 주세요</h2><div class="small muted">사진은 필요 없어요. 눌러 둔 옷으로 코디를 고르고, 없는 옷은 "옷장에 없음"으로 알려 드려요. 목록에 없는 옷은 바로 아래에서 추가하세요.</div></section>';
+  // 옷 추가
+  h+='<section class="card"><h2>옷 추가하기</h2>';
+  h+='<form class="search" data-form="addItem"><label for="newName" style="position:absolute;left:-9999px">옷 이름</label><input id="newName" name="n" maxlength="20" placeholder="예: 카멜 롱코트, 검정 가죽 자켓" value="'+esc(S.newName)+'" autocomplete="off"><button class="btn" type="submit">추가</button></form>';
+  h+='<div class="small muted">종류</div><div class="chips">'+CATALOG.map(function(c){return '<button class="chip" data-a="newCat" data-v="'+c[0]+'" aria-pressed="'+(S.newCat===c[0])+'">'+c[0]+'</button>';}).join('')+'</div>';
+  if(WARM[S.newCat]){
+    h+='<div class="small muted">두께 · 몇 도에 입을지 정하는 기준이에요</div><div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+
+      WARM[S.newCat].map(function(l,i){return '<button data-a="newWarm" data-v="'+(i+1)+'" aria-pressed="'+(S.newWarm===i+1)+'" style="font-size:13px;line-height:1.3;padding:4px">'+esc(l)+'</button>';}).join('')+'</div>';
+  }
+  if(S.addMsg) h+='<div class="small" role="status">'+esc(S.addMsg)+'</div>';
+  h+='</section>';
+  CATALOG.forEach(function(c){
+    var mine=S.custom.filter(function(x){return x.cat===c[0];});
+    var n=c[1].filter(function(p){return S.closet[p[0]];}).length+mine.filter(function(x){return S.closet[x.id];}).length;
+    h+='<section class="card"><div class="row"><h2>'+c[0]+'</h2><span class="xs muted">'+n+'개 있음</span></div><div class="chips">'+
+      c[1].map(function(p){var on=!!S.closet[p[0]];return '<button class="chip soft" data-a="closet" data-v="'+p[0]+'" aria-pressed="'+on+'">'+(on?'✓ ':'')+esc(p[1])+'</button>';}).join('')+'</div>';
+    if(mine.length){
+      h+='<div class="xs muted">내가 추가한 옷</div><div class="chips">'+mine.map(function(x){
+        var on=!!S.closet[x.id];
+        return '<span style="display:inline-flex;gap:4px"><button class="chip soft" data-a="closet" data-v="'+esc(x.id)+'" aria-pressed="'+on+'">'+(on?'✓ ':'')+esc(x.name)+(WARM[x.cat]?' · '+['얇음','보통','두꺼움'][x.warm-1]:'')+'</button>'+
+          '<button class="iconbtn" data-a="delItem" data-v="'+esc(x.id)+'" aria-label="'+esc(x.name)+' 삭제" style="width:44px;height:44px">×</button></span>';
+      }).join('')+'</div>';
+    }
+    h+='</section>';
+  });
+  return h;
+}
+function viewFb(){
+  var h='';
+  if(!W) return '<div class="status">날씨를 불러온 뒤에 기록할 수 있어요.</div>';
+  var a=analyze(true);
+  var today=a.date;
+  var entry=null;
+  S.fb.forEach(function(e){if(e.date===today)entry=e;});
+  var opts=outfits(a);
+  var outfit=summary(opts[0].items);
+  h+='<section class="card"><span class="xs muted">'+today.slice(5).replace('-','/')+' · '+esc(shortName(S.place.name))+' · '+esc(curAct().label)+'</span><h2>오늘 옷, 어땠어요?</h2>';
+  h+='<div class="small">추천 기본 코디: '+esc(outfit)+'</div>';
+  h+='<div class="temps3">'+[['cold','추웠어요','var(--cold)'],['ok','적당했어요','var(--fine)'],['hot','더웠어요','var(--hot)']].map(function(x){
+     return '<button data-a="rate" data-v="'+x[0]+'" aria-pressed="'+(entry&&entry.rating===x[0]?'true':'false')+'"><span class="dot" style="background:'+x[2]+'"></span>'+x[1]+'</button>';}).join('')+'</div>';
+  if(entry){
+    var reply={cold:'알겠어요. 다음 추천부터 한 겹 더 따뜻하게 잡을게요.',ok:'좋아요. 지금 기준을 그대로 유지할게요.',hot:'알겠어요. 다음 추천부터 한 겹 가볍게 잡을게요.'}[entry.rating];
+    h+='<div class="headline">'+reply+'</div>';
+    h+='<div class="small muted">언제 아쉬웠나요? (선택)</div><div class="chips">'+[['morning','아침'],['day','낮'],['indoor','실내'],['evening','저녁']].map(function(m){
+      var on=(entry.moments||[]).indexOf(m[0])>=0;
+      return '<button class="chip soft" data-a="moment" data-v="'+m[0]+'" aria-pressed="'+on+'">'+m[1]+'</button>';}).join('')+'</div>';
+  }
+  h+='</section>';
+  var last=S.fb.slice(-14);
+  var cells='';
+  for(var i=0;i<14;i++){
+    var e=last[i-(14-last.length)];
+    var col=e?(e.rating==='cold'?'var(--cold)':e.rating==='hot'?'var(--hot)':'var(--fine)'):'var(--sunk)';
+    cells+='<span style="background:'+col+'" title="'+(e?esc(e.date):'')+'"></span>';
+  }
+  var cold=last.filter(function(e){return e.rating==='cold';}).length,hot=last.filter(function(e){return e.rating==='hot';}).length;
+  var msg=!last.length?'아직 기록이 없어요. 저녁마다 한 번 눌러 주시면 추천이 점점 맞춰져요.':
+     cold>hot+1?'추웠다는 기록이 많아요. 추천을 '+Math.abs(fbOffset())+'° 더 따뜻한 쪽으로 맞추고 있어요.':
+     hot>cold+1?'더웠다는 기록이 많아요. 추천을 '+Math.abs(fbOffset())+'° 가벼운 쪽으로 맞추고 있어요.':'대체로 잘 맞고 있어요.';
+  h+='<section class="card"><h2>최근 기록</h2><div class="hist">'+cells+'</div><div class="legend"><span><i class="dot" style="background:var(--cold)"></i>추웠음</span><span><i class="dot" style="background:var(--fine)"></i>적당</span><span><i class="dot" style="background:var(--hot)"></i>더웠음</span></div><div class="small">'+msg+'</div></section>';
+  return h;
+}
+function viewSet(){
+  var h='<section class="card"><h2>나는 평소에</h2><div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+
+    SENS.map(function(x,i){return '<button data-a="sens" data-v="'+i+'" aria-pressed="'+(S.sens===i)+'">'+x.label+'</button>';}).join('')+'</div></section>';
+  h+='<section class="card"><h2>내가 추가한 활동</h2>'+(S.acts.length?'<div class="items">'+S.acts.map(function(x){
+      var bl='';BASES.forEach(function(b){if(b[0]===x.base)bl=b[1];});
+      return '<div class="item"><div style="display:flex;flex-direction:column;min-width:0"><span class="name">'+esc(x.label)+'</span><span class="xs muted">'+x.h0+'시–'+x.h1+'시 · '+esc(bl)+' · '+IO[x.io].label+'</span></div><button class="iconbtn" data-a="actDel" data-v="'+esc(x.id)+'" aria-label="'+esc(x.label)+' 삭제">×</button></div>';
+    }).join('')+'</div>':'<div class="small muted">오늘 탭의 "+ 활동 추가"로 골프, 학회 같은 활동을 등록할 수 있어요.</div>')+'</section>';
+  h+='<section class="card"><div class="row"><h2>메이크업 팁 보기</h2><button class="chip" data-a="makeup" aria-pressed="'+S.makeup+'">'+(S.makeup?'켜짐':'꺼짐')+'</button></div></section>';
+  h+='<section class="card"><h2>집(기준 도시)</h2><div class="small">지금: <b>'+esc(S.home.name)+'</b>. 300km 넘게 떠나 있으면 이 도시와 비교해 드려요.</div></section>';
+  h+=pickerCard('home','기준 도시 바꾸기');
+  h+=pickerCard('place','다른 도시 날씨 보기');
+  h+='<section class="card"><h2>기록 지우기</h2>';
+  if(S.confirmReset) h+='<div class="small">옷장, 설정, 피드백 기록이 모두 지워져요.</div><div class="chips"><button class="btn" data-a="resetYes">모두 지우기</button><button class="btn ghost" data-a="resetNo">취소</button></div>';
+  else h+='<div class="chips"><button class="btn ghost" data-a="reset">이 기기의 기록 지우기</button></div>';
+  return h+'</section>';
+}
+
+/* ---------- 이벤트 ---------- */
+document.addEventListener('click',function(ev){
+  var el=ev.target.closest('[data-a]'); if(!el) return;
+  var a=el.getAttribute('data-a'),v=el.getAttribute('data-v');
+  switch(a){
+    case 'tab': S.tab=v; break;
+    case 'locate': locate(); return;
+    case 'act': S.activity=v; S.opt=0; save(); break;
+    case 'actAdd': S.addingAct=!S.addingAct; S.actMsg=''; break;
+    case 'actCancel': S.addingAct=false; S.actMsg=''; break;
+    case 'preset': var pr=PRESETS[+v]; S.na={label:pr.label,base:pr.base,h0:pr.h0,h1:pr.h1,io:pr.io}; S.actMsg=''; break;
+    case 'naBase': readNa(); S.na.base=v; break;
+    case 'naIO': readNa(); S.na.io=+v; break;
+    case 'actSave':
+      readNa();
+      var nm=S.na.label.trim();
+      if(!nm){S.actMsg='활동 이름을 적어 주세요.';break;}
+      if(S.na.h1<S.na.h0){S.actMsg='끝나는 시각이 시작보다 빨라요. 같은 날 안의 시간대로 골라 주세요.';break;}
+      if(S.acts.some(function(x){return x.label===nm;})||ACT_ORDER.some(function(k){return ACT[k].label===nm;})){S.actMsg='"'+nm+'"은(는) 이미 있어요.';break;}
+      var nid='a_'+Date.now().toString(36);
+      S.acts.push({id:nid,label:nm,base:S.na.base,h0:S.na.h0,h1:S.na.h1,io:S.na.io});
+      S.activity=nid; S.opt=0; S.addingAct=false; S.actMsg=''; S.na={label:'',base:'out',h0:9,h1:18,io:1}; save(); break;
+    case 'actDel':
+      S.acts=S.acts.filter(function(x){return x.id!==v;});
+      if(S.activity===v) S.activity='work';
+      save(); break;
+    case 'opt': S.opt=+v; break;
+    case 'cmp': S.cmp=v; break;
+    case 'closet': S.closet[v]=!S.closet[v]; save(); break;
+    case 'sens': S.sens=+v; save(); break;
+    case 'makeup': S.makeup=!S.makeup; save(); break;
+    case 'rate': rate(v); break;
+    case 'moment': moment(v); break;
+    case 'quick': choose(el.getAttribute('data-mode'),QUICK[+el.getAttribute('data-i')]); return;
+    case 'pickResult': choose(el.getAttribute('data-mode'),S.results[+el.getAttribute('data-i')]); return;
+    case 'newCat': S.newCat=v; S.newName=(document.getElementById('newName')||{}).value||''; S.addMsg=''; break;
+    case 'newWarm': S.newWarm=+v; S.newName=(document.getElementById('newName')||{}).value||''; break;
+    case 'delItem':
+      var gone=null;
+      S.custom=S.custom.filter(function(c){if(c.id===v){gone=c;return false;}return true;});
+      delete S.closet[v]; save(); S.addMsg=gone?'"'+gone.name+'"을(를) 옷장에서 뺐어요.':''; break;
+    case 'day': S.day=v; S.opt=0; break;
+    case 'plan':
+      if(W){
+        var pa=analyze(false),po=outfits(pa)[S.opt]||outfits(pa)[0],pn=nowInfo(W);
+        S.plan={date:pa.date,activity:S.activity,label:po.label,summary:po.items.map(function(i){return i.name;}).join(' + '),
+          dMax:pa.dMax,maxPP:pa.maxPP,setOn:pn.date,setH:pn.h};
+        save();
+      }
+      break;
+    case 'unplan': S.plan=null; save(); break;
+    case 'reset': S.confirmReset=true; break;
+    case 'resetNo': S.confirmReset=false; break;
+    case 'resetYes':
+      try{localStorage.removeItem(KEY);}catch(e){}
+      var keepPlace=S.place; S=load(); S.place=keepPlace; S.tab='set'; save(); break;
+  }
+  render();
+});
+document.addEventListener('submit',function(ev){
+  var af=ev.target.closest('[data-form="addItem"]');
+  if(af){
+    ev.preventDefault();
+    var n=af.querySelector('input').value.trim().slice(0,20);
+    if(!n){S.addMsg='옷 이름을 적어 주세요.';render();return;}
+    var dup=S.custom.some(function(c){return c.name===n&&c.cat===S.newCat;});
+    if(dup){S.addMsg='"'+n+'"은(는) 이미 있어요.';S.newName='';render();return;}
+    var id='c_'+Date.now().toString(36);
+    S.custom.push({id:id,name:n,cat:S.newCat,warm:WARM[S.newCat]?S.newWarm:0});
+    NAME[id]=n; S.closet[id]=true; S.newName='';
+    S.addMsg='"'+n+'"을(를) '+S.newCat+'에 추가했어요. 날씨가 맞는 날 코디에 나와요.';
+    save(); render();
+    var inp=document.getElementById('newName'); if(inp) inp.focus();
+    return;
+  }
+  var f=ev.target.closest('[data-form="search"]'); if(!f) return;
+  ev.preventDefault();
+  var q=f.querySelector('input').value.trim(); if(!q) return;
+  S.q=q; S.qMode=f.getAttribute('data-mode'); S.searching=true; S.results=[]; render();
+  geocode(q).then(function(res){S.searching=false;S.results=res;if(!res.length)S.results.noHit=true;render();})
+    .catch(function(){S.searching=false;status='도시 검색에 실패했어요. 인터넷 연결을 확인해 주세요.';render();});
+});
+function readNa(){
+  var a=document.getElementById('actName'),h0=document.getElementById('naH0'),h1=document.getElementById('naH1');
+  if(a) S.na.label=a.value; if(h0) S.na.h0=+h0.value; if(h1) S.na.h1=+h1.value;
+}
+function choose(mode,pl){
+  if(!pl) return;
+  S.results=[]; S.q='';
+  if(mode==='home'){ S.home={name:pl.name,lat:pl.lat,lon:pl.lon}; save(); if(S.place) loadPlace(S.place); else render(); }
+  else { S.tab='today'; loadPlace({name:pl.name,lat:pl.lat,lon:pl.lon,gps:false}); }
+}
+function rate(v){
+  if(!W) return;
+  var a=analyze(true),today=a.date;
+  var outfit=summary(outfits(a)[0].items);
+  var found=false;
+  S.fb.forEach(function(e){if(e.date===today){e.rating=v;e.outfit=outfit;found=true;}});
+  if(!found) S.fb.push({date:today,rating:v,outfit:outfit,moments:[],place:shortName(S.place.name)});
+  S.fb.sort(function(x,y){return x.date<y.date?-1:1;});
+  if(S.fb.length>60) S.fb=S.fb.slice(-60);
+  save();
+}
+function moment(v){
+  if(!W) return;
+  var today=analyze(true).date;
+  S.fb.forEach(function(e){if(e.date===today){e.moments=e.moments||[];var i=e.moments.indexOf(v);if(i>=0)e.moments.splice(i,1);else e.moments.push(v);}});
+  save();
+}
+
+/* ---------- 시작 ---------- */
+render();
+if(S.place) loadPlace(S.place);
+locate();
+})();
+</script>
+</body>
+</html>
