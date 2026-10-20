@@ -98,9 +98,14 @@ button{cursor:pointer}
 .b .bt{font-weight:700}
 .b .bn{font-size:12px;color:var(--muted)}
 .b.must .bn{color:var(--accent)}
-.look{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--stage);border-radius:14px;padding:12px 8px 8px}
+.look{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--stage);border-radius:14px;padding:10px 8px 8px;position:relative;overflow:hidden}
+.look .ph{width:100%;max-width:300px;aspect-ratio:2/3;border-radius:12px;object-fit:cover;background:var(--sunk);display:block}
+.look .wait{position:absolute;inset:10px 8px auto;display:flex;align-items:center;justify-content:center;aspect-ratio:2/3;max-width:300px;margin:0 auto;color:var(--muted);font-size:13px;text-align:center;padding:16px}
+.look .lseg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;background:var(--surface);border-radius:12px;padding:3px;width:100%;max-width:300px}
+.look .lseg button{min-height:40px;border:0;border-radius:9px;background:transparent;font-weight:600;font-size:13px;color:var(--muted)}
+.look .lseg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
 .look svg{max-width:100%;height:auto}
-.look .cap{font-size:12px;color:#4A5868}
+.look .cap{font-size:12px;color:var(--muted);text-align:center}
 .planbox{background:var(--accent-soft);color:var(--accent);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px}
 .lines{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
 .bag{display:flex;gap:14px;align-items:center}
@@ -176,7 +181,7 @@ function load(){
   var closet=d.closet;
   if(!closet){closet={};DEFAULT_CLOSET.forEach(function(i){closet[i]=true;});}
   return {
-    closet:closet, sens:(typeof d.sens==='number'?d.sens:1), makeup:(d.makeup!==false),
+    closet:closet, sens:(typeof d.sens==='number'?d.sens:1), makeup:(d.makeup!==false), model:d.model||'f', look:d.look||'photo',
     home:d.home||{name:'서울, 대한민국',lat:37.5665,lon:126.978},
     place:d.place||null, fb:d.fb||[], activity:d.activity||'work', custom:d.custom||[], plan:d.plan||null, day:null, acts:d.acts||[], addingAct:false,
     na:{label:'',base:'out',h0:9,h1:18,io:1}, actMsg:'',
@@ -188,7 +193,7 @@ var S=load();
 function registerCustom(){S.custom.forEach(function(c){NAME[c.id]=c.name;});}
 registerCustom();
 function save(){
-  try{localStorage.setItem(KEY,JSON.stringify({closet:S.closet,sens:S.sens,makeup:S.makeup,home:S.home,place:S.place,fb:S.fb,activity:S.activity,custom:S.custom,plan:S.plan,acts:S.acts}));}catch(e){}
+  try{localStorage.setItem(KEY,JSON.stringify({closet:S.closet,sens:S.sens,makeup:S.makeup,model:S.model,look:S.look,home:S.home,place:S.place,fb:S.fb,activity:S.activity,custom:S.custom,plan:S.plan,acts:S.acts}));}catch(e){}
 }
 var WARM={'아우터':['얇은 겉옷 (가디건급)','자켓 (트렌치·가죽급)','코트·패딩'],'상의':['얇음 (반팔·셔츠)','보통 (긴팔·맨투맨)','두꺼움 (니트)'],'하의':['얇음 (린넨·반바지)','보통 (청바지·슬랙스)','두꺼움 (기모)']};
 
@@ -647,7 +652,7 @@ function shade(hex,amt){
 }
 function P(pts){return pts.map(function(p){return p[0]+','+p[1];}).join(' ');}
 function M(pts){return pts.map(function(p){return [200-p[0],p[1]];});}
-var OL='stroke="rgba(20,25,35,.38)" stroke-width="1.3" stroke-linejoin="round"';
+var OL='stroke="rgba(20,25,35,.2)" stroke-width="1.1" stroke-linejoin="round"';
 function poly(pts,fill){return '<polygon points="'+P(pts)+'" fill="'+fill+'" '+OL+'/>';}
 function pair(pts,fill){return poly(pts,fill)+poly(M(pts),fill);}
 function ln(x1,y1,x2,y2,c,w){return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+c+'" stroke-width="'+(w||1.4)+'" stroke-linecap="round"/>';}
@@ -664,7 +669,9 @@ function figure(items,ex){
     if(it.key==='acc'){(by.acc=by.acc||[]).push(rec);}
     else by[it.key]=rec;
   });
-  var skin='#D9CEC3',g='';
+  var skin='#E8C9B0',g='<ellipse cx="100" cy="376" rx="46" ry="6" fill="rgba(20,30,45,.12)"/>';
+  var hair='#3A2C25';
+  if(S.model==='f') g+='<path d="M74 44 Q72 14 100 14 Q128 14 126 44 L130 104 Q118 112 112 100 L112 52 L88 52 L88 100 Q82 112 70 104 Z" fill="'+hair+'"/>';
   var swim=!!by.swim;
   var topLayers=swim?[by.guard]:[by.base||by.top, by.base?by.top:null];
   var outer=swim?null:by.outer;
@@ -767,7 +774,9 @@ function figure(items,ex){
     }
   }
   // 목·머리
-  g+='<circle cx="100" cy="42" r="22" fill="'+skin+'" '+OL+'/>';
+  g+='<ellipse cx="100" cy="44" rx="20" ry="23" fill="'+skin+'" '+OL+'/>';
+  g+=S.model==='f'?'<path d="M79 40 Q80 18 100 18 Q122 18 121 40 Q112 28 96 30 Q86 31 79 40 Z" fill="'+hair+'"/>':'<path d="M80 38 Q80 18 100 18 Q120 18 120 38 Q114 26 100 27 Q86 26 80 38 Z" fill="'+hair+'"/>';
+  g+='<path d="M93 54 Q100 58 107 54" fill="none" stroke="#B5765F" stroke-width="1.4" stroke-linecap="round"/><circle cx="92" cy="45" r="1.5" fill="#3A2C25"/><circle cx="108" cy="45" r="1.5" fill="#3A2C25"/>';
   // 소품
   (by.acc||[]).forEach(function(a){
     if(a.shape==='muffler'){g+='<rect x="83" y="70" width="34" height="14" rx="6" fill="'+a.color+'" '+OL+'/><rect x="104" y="80" width="12" height="54" rx="3" fill="'+a.color+'" '+OL+'/>'+ln(106,128,106,134,shade(a.color,-0.3))+ln(110,128,110,134,shade(a.color,-0.3))+ln(114,128,114,134,shade(a.color,-0.3));}
@@ -780,6 +789,76 @@ function figure(items,ex){
   else if(ex.bag==='backpack') g+=ln(80,84,78,150,'#2E3440',5)+ln(120,84,122,150,'#2E3440',5);
   if(ex.umbrella) g+=ln(48,214,46,300,'#2A2A2E',2)+'<path d="M48 214 q-8 0 -8 -7" fill="none" stroke="#2A2A2E" stroke-width="2.2"/><path d="M44 232 L52 232 L48 296 Z" fill="'+FIG_COLOR.umbrella+'" '+OL+'/>';
   return '<svg viewBox="0 0 200 384" width="170" height="326" role="img" aria-label="'+esc(items.filter(function(i){return i.key!=='carry';}).map(function(i){return i.name;}).join(', '))+'을 입은 예시 그림" xmlns="http://www.w3.org/2000/svg">'+g+'</svg>';
+}
+
+
+/* ---------- 사진 같은 예시 (AI 이미지 생성) ---------- */
+var EN={padding:'long puffer down coat',lightpad:'light quilted puffer jacket',wool:'wool coat',trench:'trench coat',blazer:'tailored blazer',leather:'leather jacket',denimjk:'denim jacket',fleecejk:'fleece jacket',cardigan:'knit cardigan',windbreaker:'windbreaker jacket',rainjacket:'waterproof rain jacket',
+  tee_s:'t-shirt',tee_l:'long sleeve t-shirt',thinturtle:'thin turtleneck',shirt:'button-up shirt',linen:'linen shirt',knit:'knit sweater',vest:'knit sweater vest',turtle:'chunky turtleneck sweater',sweat:'sweatshirt',hoodie:'hoodie',sporttee:'athletic t-shirt',rashguard:'rash guard',
+  slacks:'tailored trousers',jeans:'jeans',cotton:'chino pants',skirt:'midi skirt',fleece:'warm wool trousers',shorts:'shorts',training:'track pants',swim:'swimsuit',
+  loafer:'leather loafers',sneakers:'white sneakers',boots:'chelsea boots',rainboots:'rain boots',sandals:'sandals',aqua:'water shoes',muffler:'scarf',cap:'cap',gloves:'gloves'};
+var EN_COLOR={padding:'navy',lightpad:'olive',wool:'camel',trench:'beige',blazer:'charcoal',leather:'black',denimjk:'light blue',fleecejk:'cream',cardigan:'oatmeal',windbreaker:'slate blue',rainjacket:'mustard',
+  tee_s:'white',tee_l:'ivory',thinturtle:'black',shirt:'light blue',linen:'off-white',knit:'beige',vest:'brown',turtle:'chocolate',sweat:'grey',hoodie:'grey',sporttee:'blue',rashguard:'navy',
+  slacks:'charcoal',jeans:'blue',cotton:'khaki',skirt:'mauve',fleece:'charcoal',shorts:'light blue',training:'black',swim:'red',
+  loafer:'brown',boots:'dark brown',rainboots:'dark green',sandals:'tan',muffler:'red',cap:'navy',gloves:'grey'};
+var KO_EN_COLOR=[['검정','black'],['블랙','black'],['검은','black'],['흰','white'],['화이트','white'],['아이보리','ivory'],['크림','cream'],['차콜','charcoal'],['회색','grey'],['그레이','grey'],['네이비','navy'],['남색','navy'],['하늘','sky blue'],['파랑','blue'],['파란','blue'],['블루','blue'],['베이지','beige'],['카멜','camel'],['오트밀','oatmeal'],['갈색','brown'],['브라운','brown'],['카키','khaki'],['초록','green'],['그린','green'],['빨강','red'],['빨간','red'],['레드','red'],['버건디','burgundy'],['와인','burgundy'],['분홍','pink'],['핑크','pink'],['노랑','yellow'],['노란','yellow'],['보라','purple'],['퍼플','purple']];
+function enItem(it){
+  var shape=figShape(it); if(!shape||!EN[shape]) return null;
+  var col=EN_COLOR[it.id]||'';
+  if(!FIG_COLOR[it.id]){
+    col='';
+    for(var i=0;i<KO_EN_COLOR.length;i++){if((it.name||'').indexOf(KO_EN_COLOR[i][0])>=0){col=KO_EN_COLOR[i][1];break;}}
+    if(/롱|long/i.test(it.name||'')&&shape==='wool') return (col?col+' ':'')+'long wool coat';
+  }
+  return (col?col+' ':'')+EN[shape];
+}
+function photoPrompt(items,ex,a){
+  var by={};
+  items.forEach(function(it){if(it.key==='carry'||it.key==='inner')return;var e=enItem(it);if(!e)return;if(it.key==='acc'){(by.acc=by.acc||[]).push(e);}else by[it.key]=e;});
+  var who=S.model==='m'?'a man':'a woman';
+  var wear=[];
+  if(by.swim){wear.push(by.swim);if(by.guard)wear.push(by.guard);}
+  if(by.outer) wear.push(by.outer+(by.top||by.base?' over '+[by.top,by.base].filter(Boolean).join(' layered over '):''));
+  else if(by.top&&by.base) wear.push(by.top+' layered over '+by.base);
+  else if(by.top||by.base) wear.push(by.top||by.base);
+  if(by.bottom) wear.push(by.bottom);
+  if(by.shoes) wear.push(by.shoes);
+  (by.acc||[]).forEach(function(x){wear.push(x);});
+  if(ex.sun) wear.push('sunglasses');
+  var bag={tote:'a leather tote bag',cross:'a small crossbody bag',backpack:'a backpack'}[ex.bag];
+  var act=K();
+  var scene={work:'city street near an office',out:'city street',sport:'park running path',water:'beach',fish:'riverside',trip:'old town street'}[act]||'city street';
+  var sky=a.snow?'snowy day':a.wet?'rainy day':a.sunny>=0.5?'sunny day':'cloudy day';
+  var t='Street style fashion photo, full body, '+who+' wearing '+wear.join(', ')+(bag?', carrying '+bag:'')+(ex.umbrella?', holding a folded umbrella':'')+
+    ', '+scene+' on a '+sky+', natural light, realistic photography, 35mm, editorial, clean background';
+  return t;
+}
+function hashStr(t){var h=2166136261;for(var i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0)%1000000;}
+function photoUrl(prompt){
+  return 'https://image.pollinations.ai/prompt/'+encodeURIComponent(prompt)+'?width=576&height=864&nologo=true&model=flux&seed='+hashStr(prompt);
+}
+var PHOTO={};   // url -> 'ok' | 'err'
+var PHOTO_TIMER={};
+document.addEventListener('load',function(e){var t=e.target;if(t&&t.classList&&t.classList.contains('ph')){var u=t.getAttribute('src');if(PHOTO[u]!=='ok'){PHOTO[u]='ok';clearTimeout(PHOTO_TIMER[u]);var w=t.parentNode.querySelector('.wait');if(w)w.hidden=true;}}},true);
+document.addEventListener('error',function(e){var t=e.target;if(t&&t.classList&&t.classList.contains('ph')){var u=t.getAttribute('src');PHOTO[u]='err';clearTimeout(PHOTO_TIMER[u]);render();}},true);
+function lookBox(items,ex,a){
+  var h='<div class="look">';
+  var mode=S.look;
+  var url=null;
+  if(mode==='photo'){url=photoUrl(photoPrompt(items,ex,a));}
+  if(mode==='photo'&&PHOTO[url]!=='err'){
+    if(!PHOTO[url]&&!PHOTO_TIMER[url]){
+      PHOTO_TIMER[url]=setTimeout(function(){if(!PHOTO[url]){PHOTO[url]='err';render();}},60000);
+    }
+    h+='<img class="ph" src="'+esc(url)+'" alt="'+esc(items.filter(function(i){return i.key!=='carry';}).map(function(i){return i.name;}).join(', '))+'을 입은 예시 사진">';
+    if(PHOTO[url]!=='ok') h+='<div class="wait" aria-live="polite">오늘 코디로 예시 사진을 만드는 중이에요<br>(10~30초 걸려요)</div>';
+    h+='<span class="cap">AI로 만든 예시 사진 · 실제 내 옷과 색·모양이 다를 수 있어요</span>';
+  } else {
+    h+=figure(items,ex);
+    h+='<span class="cap">'+(mode==='photo'?'사진 서비스에 연결하지 못해 그림으로 보여드려요':'예시 그림 · 색은 옷 이름 기준이에요')+'</span>';
+  }
+  h+='<div class="lseg" role="group" aria-label="예시 보기 방식"><button data-a="look" data-v="photo" aria-pressed="'+(mode==='photo')+'">사진</button><button data-a="look" data-v="draw" aria-pressed="'+(mode==='draw')+'">그림</button></div>';
+  return h+'</div>';
 }
 
 /* ---------- 렌더 ---------- */
@@ -798,7 +877,7 @@ function render(){
   else if(S.tab==='closet') html+=viewCloset();
   else if(S.tab==='fb') html+=viewFb();
   else html+=viewSet();
-  html+='<p class="foot">날씨 데이터 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0) · 위치 이름 BigDataCloud · 프로토타입</p>';
+  html+='<p class="foot">날씨 데이터 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0) · 위치 이름 BigDataCloud · 예시 사진 Pollinations.ai · 프로토타입</p>';
   root.innerHTML=html;
 }
 function pickerCard(mode,title){
@@ -908,7 +987,7 @@ function viewToday(away){
     h+='<div class="planbox"><span class="xs">'+when+' '+(+P.setH)+'시에 정해 둔 코디 · '+esc(P.label)+'</span><b>'+esc(P.summary)+'</b>'+
        '<span class="small">'+(changes.length?'그 사이 예보가 바뀌었어요: '+esc(changes.join(', '))+'. 아래 추천을 다시 확인해 보세요.':'예보가 그대로예요. 정한 대로 입으시면 돼요.')+'</span></div>';
   }
-  h+='<div class="look">'+figure(o.items,{umbrella:must('umbrella'),sun:must('sunglass'),bag:bg2.ic})+'<span class="cap">예시 그림 · 색은 옷 이름 기준이에요</span></div>';
+  h+=lookBox(o.items,{umbrella:must('umbrella'),sun:must('sunglass'),bag:bg2.ic},a);
   h+='<div class="small">'+esc(o.desc)+'</div><div class="items">';
   o.items.forEach(function(it){
     h+='<div class="item"><div style="display:flex;flex-direction:column;min-width:0"><span class="xs muted">'+esc(it.part)+'</span><span class="name">'+esc(it.name)+'</span></div>'+
@@ -1014,6 +1093,7 @@ function viewSet(){
       var bl='';BASES.forEach(function(b){if(b[0]===x.base)bl=b[1];});
       return '<div class="item"><div style="display:flex;flex-direction:column;min-width:0"><span class="name">'+esc(x.label)+'</span><span class="xs muted">'+x.h0+'시–'+x.h1+'시 · '+esc(bl)+' · '+IO[x.io].label+'</span></div><button class="iconbtn" data-a="actDel" data-v="'+esc(x.id)+'" aria-label="'+esc(x.label)+' 삭제">×</button></div>';
     }).join('')+'</div>':'<div class="small muted">오늘 탭의 "+ 활동 추가"로 골프, 학회 같은 활동을 등록할 수 있어요.</div>')+'</section>';
+  h+='<section class="card"><h2>예시 사진 모델</h2><div class="seg" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button data-a="model" data-v="f" aria-pressed="'+(S.model==='f')+'">여성</button><button data-a="model" data-v="m" aria-pressed="'+(S.model==='m')+'">남성</button></div><div class="xs muted">예시 사진은 옷 이름만 Pollinations.ai 이미지 생성 서비스로 보내 만들어요. 위치나 기록은 보내지 않아요.</div></section>';
   h+='<section class="card"><div class="row"><h2>메이크업 팁 보기</h2><button class="chip" data-a="makeup" aria-pressed="'+S.makeup+'">'+(S.makeup?'켜짐':'꺼짐')+'</button></div></section>';
   h+='<section class="card"><h2>집(기준 도시)</h2><div class="small">지금: <b>'+esc(S.home.name)+'</b>. 300km 넘게 떠나 있으면 이 도시와 비교해 드려요.</div></section>';
   h+=pickerCard('home','기준 도시 바꾸기');
@@ -1055,6 +1135,8 @@ document.addEventListener('click',function(ev){
     case 'closet': S.closet[v]=!S.closet[v]; save(); break;
     case 'sens': S.sens=+v; save(); break;
     case 'makeup': S.makeup=!S.makeup; save(); break;
+    case 'look': S.look=v; save(); break;
+    case 'model': S.model=v; save(); break;
     case 'rate': rate(v); break;
     case 'moment': moment(v); break;
     case 'quick': choose(el.getAttribute('data-mode'),QUICK[+el.getAttribute('data-i')]); return;
