@@ -21,7 +21,7 @@
   --note-bg:#FEF3C7; --note-fg:#713F12;
   --cold:#3B82F6; --fine:#94A3B8; --hot:#EA7A2C;
   --sky-sun:#0F6E80; --sky-cloud:#46566A; --sky-rain:#1E3A7A; --sky-snow:#56677F; --sky-night:#26314A;
-  --on-sky:#FFFFFF; --on-sky-muted:#D8E6F2;
+  --on-sky:#FFFFFF; --stage:#E6ECF2; --on-sky-muted:#D8E6F2;
   --font:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
   color-scheme:light;
@@ -31,14 +31,14 @@
   --fg:#E7EDF3; --muted:#A4B2C1; --accent:#8DB4F0; --accent-soft:#1D3150; --on-accent:#0D131A;
   --must:#FDBA74; --must-soft:#3A2414; --ok:#86EFAC; --ok-soft:#13301E;
   --note-bg:#3A3010; --note-fg:#FDE68A;
-  --sky-sun:#0B5764; --sky-cloud:#36455A; --sky-rain:#182F66; --sky-snow:#45556C; --sky-night:#1E2840;
+  --sky-sun:#0B5764; --sky-cloud:#36455A; --sky-rain:#182F66; --sky-snow:#45556C; --sky-night:#1E2840; --stage:#D5DDE6;
   color-scheme:dark;}}
 :root[data-theme="dark"]{
   --bg:#0D131A; --surface:#161F29; --sunk:#1E2934; --line:#2A3745;
   --fg:#E7EDF3; --muted:#A4B2C1; --accent:#8DB4F0; --accent-soft:#1D3150; --on-accent:#0D131A;
   --must:#FDBA74; --must-soft:#3A2414; --ok:#86EFAC; --ok-soft:#13301E;
   --note-bg:#3A3010; --note-fg:#FDE68A;
-  --sky-sun:#0B5764; --sky-cloud:#36455A; --sky-rain:#182F66; --sky-snow:#45556C; --sky-night:#1E2840;
+  --sky-sun:#0B5764; --sky-cloud:#36455A; --sky-rain:#182F66; --sky-snow:#45556C; --sky-night:#1E2840; --stage:#D5DDE6;
   color-scheme:dark;}
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -98,6 +98,9 @@ button{cursor:pointer}
 .b .bt{font-weight:700}
 .b .bn{font-size:12px;color:var(--muted)}
 .b.must .bn{color:var(--accent)}
+.look{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--stage);border-radius:14px;padding:12px 8px 8px}
+.look svg{max-width:100%;height:auto}
+.look .cap{font-size:12px;color:#4A5868}
 .planbox{background:var(--accent-soft);color:var(--accent);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px}
 .lines{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
 .bag{display:flex;gap:14px;align-items:center}
@@ -611,6 +614,174 @@ function compareInfo(a){
     right:{label:targetWord,t:r(a.dMax)+'° / '+r(a.dMin)+'°',note:skyText(a.dCode)}};
 }
 
+/* ---------- 코디 그림 (추천 옷을 마네킹에 입혀 그리기) ---------- */
+var FIG_COLOR={
+  padding:'#2B3A55',lightpad:'#4B5640',wool:'#A07C5A',trench:'#CDB58C',blazer:'#3A3F4B',leather:'#26262A',denimjk:'#5B7BA6',fleecejk:'#E6E0D3',cardigan:'#B9A68A',windbreaker:'#4C6A7F',rainjacket:'#E2B23B',
+  tee_s:'#F4F4F2',tee_l:'#ECE8E0',thinturtle:'#2E2E33',shirt:'#D3E1F0',linen:'#EFE8D8',knit:'#CDB79A',vest:'#8C7A64',turtle:'#6E5A4A',sweat:'#9BA3AE',hoodie:'#7D8AA0',heattech:'#E0D6CC',sporttee:'#3B6FB6',rashguard:'#2E5E7E',
+  slacks:'#3B3F47',jeans:'#4E6E9C',cotton:'#C9B79C',skirt:'#6D5A73',fleece:'#4A4A4E',shorts:'#8FA3B8',training:'#2D2F36',swim:'#C9504B',
+  loafer:'#4A3426',sneakers:'#F2F2F0',boots:'#3B2A20',rainboots:'#2F4F3F',sandals:'#B08A6A',aqua:'#3A7CA5',
+  muffler:'#B5483B',cap:'#2C3E50',gloves:'#55595F',sunglass:'#1E1E22',umbrella:'#3A5A8C'
+};
+var COLOR_WORDS=[['검정','#26262A'],['블랙','#26262A'],['검은','#26262A'],['흰','#F4F4F2'],['화이트','#F4F4F2'],['아이보리','#EFE9DA'],['크림','#EFE6D2'],['차콜','#3F434A'],['회색','#9AA0A8'],['그레이','#9AA0A8'],['네이비','#26324A'],['남색','#26324A'],['하늘','#A9C8E8'],['파랑','#3B6FB6'],['파란','#3B6FB6'],['블루','#3B6FB6'],['베이지','#D8C3A0'],['카멜','#B08455'],['오트밀','#D9CBB2'],['갈색','#6B4A33'],['브라운','#6B4A33'],['카키','#6B6B45'],['초록','#4F7A55'],['그린','#4F7A55'],['빨강','#B5383B'],['빨간','#B5383B'],['레드','#B5383B'],['버건디','#6E2333'],['와인','#6E2333'],['분홍','#E7A7B5'],['핑크','#E7A7B5'],['노랑','#E2B23B'],['노란','#E2B23B'],['옐로','#E2B23B'],['보라','#6D5A8E'],['퍼플','#6D5A8E'],['데님','#4E6E9C'],['청','#4E6E9C']];
+var SHAPE_WORDS=[['패딩','padding'],['코트','wool'],['트렌치','trench'],['가죽','leather'],['레더','leather'],['블레이저','blazer'],['자켓','blazer'],['재킷','blazer'],['점퍼','windbreaker'],['바람막이','windbreaker'],['플리스','fleecejk'],['가디건','cardigan'],['조끼','vest'],['베스트','vest'],['후드','hoodie'],['맨투맨','sweat'],['니트','knit'],['스웨터','knit'],['목티','thinturtle'],['터틀','thinturtle'],['셔츠','shirt'],['블라우스','shirt'],['반팔','tee_s'],['티','tee_l'],['치마','skirt'],['스커트','skirt'],['반바지','shorts'],['청바지','jeans'],['진','jeans'],['슬랙스','slacks'],['바지','slacks'],['부츠','boots'],['로퍼','loafer'],['구두','loafer'],['운동화','sneakers'],['스니커','sneakers'],['샌들','sandals'],['머플러','muffler'],['목도리','muffler'],['스카프','muffler'],['모자','cap'],['장갑','gloves']];
+var DEFAULT_SHAPE={'아우터':['cardigan','blazer','wool'],'상의':['tee_l','sweat','knit'],'하의':['cotton','slacks','fleece'],'신발':['sneakers'],'소품':['cap']};
+function figShape(it){
+  if(FIG_COLOR[it.id]) return it.id;
+  var c=null;S.custom.forEach(function(x){if(x.id===it.id)c=x;});
+  var n=it.name||'';
+  for(var i=0;i<SHAPE_WORDS.length;i++){if(n.indexOf(SHAPE_WORDS[i][0])>=0)return SHAPE_WORDS[i][1];}
+  if(!c) return null;
+  var d=DEFAULT_SHAPE[c.cat]||['tee_l'];
+  return d[Math.max(0,Math.min(d.length-1,(c.warm||1)-1))];
+}
+function figColor(it,shape){
+  if(FIG_COLOR[it.id]) return FIG_COLOR[it.id];
+  var n=it.name||'';
+  for(var i=0;i<COLOR_WORDS.length;i++){if(n.indexOf(COLOR_WORDS[i][0])>=0)return COLOR_WORDS[i][1];}
+  return FIG_COLOR[shape]||'#8A8F98';
+}
+function shade(hex,amt){
+  var n=parseInt(hex.slice(1),16),r0=(n>>16)&255,g0=(n>>8)&255,b0=n&255;
+  function f(v){return Math.max(0,Math.min(255,Math.round(amt<0?v*(1+amt):v+(255-v)*amt)));}
+  return '#'+[f(r0),f(g0),f(b0)].map(function(v){return ('0'+v.toString(16)).slice(-2);}).join('');
+}
+function P(pts){return pts.map(function(p){return p[0]+','+p[1];}).join(' ');}
+function M(pts){return pts.map(function(p){return [200-p[0],p[1]];});}
+var OL='stroke="rgba(20,25,35,.38)" stroke-width="1.3" stroke-linejoin="round"';
+function poly(pts,fill){return '<polygon points="'+P(pts)+'" fill="'+fill+'" '+OL+'/>';}
+function pair(pts,fill){return poly(pts,fill)+poly(M(pts),fill);}
+function ln(x1,y1,x2,y2,c,w){return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+c+'" stroke-width="'+(w||1.4)+'" stroke-linecap="round"/>';}
+function torso(len,flare,wide){var w=wide||0;return [[64-w,82],[88,72],[112,72],[136+w,82],[134+w+flare,len],[66-w-flare,len]];}
+function sleeve(len,wide){var w=wide||0;return [[64-w,82],[52-w,87],[40-w,len],[55,len+3],[66,112]];}
+function shortSleeve(){return [[64,82],[52,87],[47,124],[62,126],[66,110]];}
+
+function figure(items,ex){
+  var by={};
+  items.forEach(function(it){
+    if(it.key==='carry') return;
+    var s=figShape(it); if(!s) return;
+    var rec={shape:s,color:figColor(it,s)};
+    if(it.key==='acc'){(by.acc=by.acc||[]).push(rec);}
+    else by[it.key]=rec;
+  });
+  var skin='#D9CEC3',g='';
+  var swim=!!by.swim;
+  var topLayers=swim?[by.guard]:[by.base||by.top, by.base?by.top:null];
+  var outer=swim?null:by.outer;
+  var hooded=(topLayers.concat([outer])).some(function(x){return x&&(x.shape==='hoodie'||x.shape==='rainjacket'||x.shape==='windbreaker');});
+
+  // 뒤쪽: 백팩, 후드
+  if(ex.bag==='backpack') g+='<rect x="70" y="92" width="60" height="78" rx="12" fill="#3B4250" '+OL+'/>';
+  if(hooded){var hc=(outer&&(outer.shape==='rainjacket'||outer.shape==='windbreaker'))?outer.color:(topLayers[1]&&topLayers[1].shape==='hoodie'?topLayers[1].color:(topLayers[0]?topLayers[0].color:'#7D8AA0'));
+    g+='<ellipse cx="100" cy="70" rx="31" ry="14" fill="'+shade(hc,-0.12)+'" '+OL+'/>';}
+  // 몸 (마네킹)
+  g+=pair([[66,84],[54,88],[42,208],[54,212],[66,112]],skin);
+  g+=pair([[74,196],[99,196],[98,362],[76,362]],skin);
+  g+='<ellipse cx="86" cy="366" rx="13" ry="6" fill="'+skin+'" '+OL+'/><ellipse cx="114" cy="366" rx="13" ry="6" fill="'+skin+'" '+OL+'/>';
+  g+='<circle cx="48" cy="215" r="7" fill="'+skin+'" '+OL+'/><circle cx="152" cy="215" r="7" fill="'+skin+'" '+OL+'/>';
+  g+=poly(torso(200,0),skin);
+  g+='<rect x="92" y="58" width="16" height="20" fill="'+skin+'" '+OL+'/>';
+
+  // 하의
+  var bt=swim?by.swim:by.bottom;
+  if(bt){
+    var c=bt.color,s=bt.shape;
+    if(s==='swim'){g+=poly([[68,192],[132,192],[128,222],[106,230],[94,230],[72,222]],c);}
+    else if(s==='skirt'){g+=poly([[70,190],[130,190],[144,292],[56,292]],c);g+=ln(70,196,130,196,shade(c,-0.25));}
+    else if(s==='shorts'){g+=pair([[69,192],[100,192],[100,228],[99,256],[71,256]],c);}
+    else{
+      g+=pair([[69,192],[100,192],[100,230],[98,360],[73,360]],c);
+      if(s==='jeans'){g+=ln(86,215,85,355,shade(c,0.35),1);g+=ln(114,215,115,355,shade(c,0.35),1);}
+      if(s==='slacks'){g+=ln(86,200,85,358,shade(c,0.25),1);g+=ln(114,200,115,358,shade(c,0.25),1);}
+      if(s==='training'){g+=ln(72,200,74,358,'#E8E8E8',2.4);g+=ln(128,200,126,358,'#E8E8E8',2.4);}
+    }
+    if(s!=='swim') g+=ln(69,196,131,196,shade(c,-0.25),1.2);
+  }
+  // 신발
+  var sh=by.shoes;
+  if(sh){
+    var sc=sh.color,ss=sh.shape;
+    [[0],[1]].forEach(function(k){
+      var x=k[0]?102:72,cx=k[0]?114:86;
+      if(ss==='boots') g+='<path d="M'+(x+1)+' 320 h26 v44 q8 2 8 8 h-36 z" fill="'+sc+'" '+OL+'/>';
+      else if(ss==='rainboots') g+='<path d="M'+x+' 300 h28 v64 q8 2 8 8 h-38 z" fill="'+sc+'" '+OL+'/>'+ln(x+4,306,x+4,360,shade(sc,0.35),1.5);
+      else if(ss==='sandals') g+=ln(cx-12,364,cx+12,364,sc,3)+ln(cx-6,360,cx+8,368,sc,2.5)+'<rect x="'+(cx-15)+'" y="370" width="30" height="4" rx="2" fill="'+shade(sc,-0.3)+'"/>';
+      else if(ss==='loafer') g+='<path d="M'+(cx-14)+' 372 q0 -14 14 -14 q14 0 16 14 z" fill="'+sc+'" '+OL+'/>';
+      else g+='<path d="M'+(cx-14)+' 371 q0 -16 14 -16 q15 0 17 14 z" fill="'+sc+'" '+OL+'/><rect x="'+(cx-15)+'" y="369" width="32" height="5" rx="2" fill="'+(ss==='aqua'?'#DDE6EE':'#C9C9C4')+'" '+OL+'/>';
+    });
+  }
+  // 상의 (안 → 겉)
+  topLayers.forEach(function(t,li){
+    if(!t) return;
+    var c=t.color,s=t.shape;
+    if(s==='vest'){g+=poly([[67,86],[90,80],[100,122],[110,80],[133,86],[132,198],[68,198]],c);g+=ln(70,193,130,193,shade(c,-0.2),3);return;}
+    if(s==='cardigan'&&li>0){
+      g+=pair(sleeve(205,1),c);
+      g+=pair([[64,82],[90,72],[98,200],[66,200]],c);
+      for(var yb=100;yb<=180;yb+=20) g+='<circle cx="94" cy="'+yb+'" r="1.8" fill="'+shade(c,-0.4)+'"/>';
+      return;
+    }
+    var short=(s==='tee_s');
+    g+=short?pair(shortSleeve(),c):pair(sleeve(205),c);
+    g+=poly(torso(200,1),c);
+    if(s==='knit'||s==='sweat'||s==='turtle'){g+=ln(68,194,132,194,shade(c,-0.18),5);g+=ln(41,202,54,205,shade(c,-0.18),4);g+=ln(159,202,146,205,shade(c,-0.18),4);}
+    if(s==='hoodie'){g+='<rect x="80" y="156" width="40" height="30" rx="6" fill="'+shade(c,-0.1)+'" '+OL+'/>'+ln(95,80,94,104,'#EEE',1.2)+ln(105,80,106,104,'#EEE',1.2);}
+    if(s==='shirt'||s==='linen'){g+=poly([[88,70],[100,84],[92,88]],shade(c,0.25))+poly([[112,70],[100,84],[108,88]],shade(c,0.25));for(var y2=96;y2<=190;y2+=18) g+='<circle cx="100" cy="'+y2+'" r="1.5" fill="'+shade(c,-0.35)+'"/>';}
+    if(s==='tee_s'||s==='tee_l'||s==='sporttee'||s==='sweat'||s==='heattech'||s==='rashguard') g+='<path d="M89 73 q11 10 22 0" fill="none" stroke="'+shade(c,-0.3)+'" stroke-width="1.5"/>';
+    if(s==='thinturtle'||s==='turtle') g+='<rect x="'+(s==='turtle'?88:90)+'" y="60" width="'+(s==='turtle'?24:20)+'" height="18" rx="5" fill="'+c+'" '+OL+'/>';
+  });
+  // 아우터
+  if(outer){
+    var c2=outer.color,s2=outer.shape;
+    if(s2==='padding'||s2==='lightpad'){
+      var len=s2==='padding'?240:206,w2=s2==='padding'?6:2;
+      g+=pair(sleeve(206,w2+2),c2);
+      g+=poly(torso(len,3,w2),c2);
+      for(var y3=100;y3<len;y3+=(s2==='padding'?22:15)){g+=ln(62-w2,y3,138+w2,y3,shade(c2,-0.28),1.2);}
+      g+=ln(100,72,100,len,shade(c2,-0.35),1.4);
+      if(s2==='padding') g+='<rect x="86" y="62" width="28" height="16" rx="6" fill="'+c2+'" '+OL+'/>';
+    } else if(s2==='wool'||s2==='trench'){
+      g+=pair(sleeve(208,3),c2);
+      g+=pair([[61,82],[88,72],[94,98],[93,300],[56,300]],c2);
+      g+=poly([[88,72],[94,98],[86,132],[80,96]],shade(c2,-0.12))+poly([[112,72],[106,98],[114,132],[120,96]],shade(c2,-0.12));
+      if(s2==='trench'){g+='<rect x="58" y="182" width="84" height="9" fill="'+shade(c2,-0.15)+'" '+OL+'/><rect x="94" y="181" width="12" height="11" fill="none" stroke="'+shade(c2,-0.45)+'" stroke-width="1.5"/>';
+        [140,160].forEach(function(yy){g+='<circle cx="86" cy="'+yy+'" r="2" fill="'+shade(c2,-0.45)+'"/><circle cx="114" cy="'+yy+'" r="2" fill="'+shade(c2,-0.45)+'"/>';});}
+      else [140,175,210].forEach(function(yy){g+='<circle cx="89" cy="'+yy+'" r="2.2" fill="'+shade(c2,-0.45)+'"/>';});
+    } else if(s2==='cardigan'){
+      g+=pair(sleeve(205,1),c2);
+      g+=pair([[64,82],[90,72],[96,204],[66,204]],c2);
+      for(var yb2=100;yb2<=185;yb2+=20) g+='<circle cx="94" cy="'+yb2+'" r="1.8" fill="'+shade(c2,-0.4)+'"/>';
+    } else {
+      var L2=s2==='blazer'?216:206;
+      g+=pair(sleeve(206,2),c2);
+      if(s2==='blazer'){
+        g+=pair([[62,82],[88,72],[96,140],[95,216],[63,216]],c2);
+        g+=poly([[88,72],[100,140],[84,108]],shade(c2,0.15))+poly([[112,72],[100,140],[116,108]],shade(c2,0.15));
+        g+='<circle cx="90" cy="160" r="2.2" fill="'+shade(c2,0.5)+'"/>';
+      } else {
+        g+=pair([[62,82],[88,72],[95,L2],[63,L2]],c2);
+        if(s2==='leather'){g+=ln(93,90,93,L2-2,'#9AA0A8',1.6);g+=poly([[88,72],[96,92],[80,94]],shade(c2,0.18))+poly([[112,72],[104,92],[120,94]],shade(c2,0.18));}
+        else if(s2==='denimjk'){g+='<rect x="72" y="104" width="16" height="14" fill="none" stroke="'+shade(c2,0.35)+'"/><rect x="112" y="104" width="16" height="14" fill="none" stroke="'+shade(c2,0.35)+'"/>';g+=ln(64,L2-6,94,L2-6,shade(c2,-0.2),5)+ln(136,L2-6,106,L2-6,shade(c2,-0.2),5);}
+        else {g+=ln(94,74,94,L2,shade(c2,-0.35),1.6)+ln(106,74,106,L2,shade(c2,-0.35),1.6);g+=ln(64,L2-6,94,L2-6,shade(c2,-0.15),4)+ln(136,L2-6,106,L2-6,shade(c2,-0.15),4);}
+      }
+    }
+  }
+  // 목·머리
+  g+='<circle cx="100" cy="42" r="22" fill="'+skin+'" '+OL+'/>';
+  // 소품
+  (by.acc||[]).forEach(function(a){
+    if(a.shape==='muffler'){g+='<rect x="83" y="70" width="34" height="14" rx="6" fill="'+a.color+'" '+OL+'/><rect x="104" y="80" width="12" height="54" rx="3" fill="'+a.color+'" '+OL+'/>'+ln(106,128,106,134,shade(a.color,-0.3))+ln(110,128,110,134,shade(a.color,-0.3))+ln(114,128,114,134,shade(a.color,-0.3));}
+    else if(a.shape==='cap'){g+='<path d="M77 38 Q100 8 123 38 Z" fill="'+a.color+'" '+OL+'/><path d="M100 36 L134 38 L132 44 L100 42 Z" fill="'+shade(a.color,-0.2)+'" '+OL+'/>';}
+    else if(a.shape==='gloves'){g+='<circle cx="48" cy="215" r="8" fill="'+a.color+'" '+OL+'/><circle cx="152" cy="215" r="8" fill="'+a.color+'" '+OL+'/>';}
+  });
+  if(ex.sun) g+='<ellipse cx="91" cy="44" rx="7.5" ry="5.5" fill="#1E1E22"/><ellipse cx="109" cy="44" rx="7.5" ry="5.5" fill="#1E1E22"/>'+ln(98,43,102,43,'#1E1E22',1.6);
+  if(ex.bag==='cross') g+=ln(70,86,128,196,'#5A4636',3)+'<rect x="120" y="190" width="28" height="22" rx="4" fill="#6B5240" '+OL+'/>';
+  else if(ex.bag==='tote') g+='<path d="M146 214 q8 -22 16 0" fill="none" stroke="#5A4636" stroke-width="2.5"/><rect x="138" y="212" width="34" height="34" rx="3" fill="#8A6A4E" '+OL+'/>';
+  else if(ex.bag==='backpack') g+=ln(80,84,78,150,'#2E3440',5)+ln(120,84,122,150,'#2E3440',5);
+  if(ex.umbrella) g+=ln(48,214,46,300,'#2A2A2E',2)+'<path d="M48 214 q-8 0 -8 -7" fill="none" stroke="#2A2A2E" stroke-width="2.2"/><path d="M44 232 L52 232 L48 296 Z" fill="'+FIG_COLOR.umbrella+'" '+OL+'/>';
+  return '<svg viewBox="0 0 200 384" width="170" height="326" role="img" aria-label="'+esc(items.filter(function(i){return i.key!=='carry';}).map(function(i){return i.name;}).join(', '))+'을 입은 예시 그림" xmlns="http://www.w3.org/2000/svg">'+g+'</svg>';
+}
+
 /* ---------- 렌더 ---------- */
 var root=document.getElementById('app');
 function render(){
@@ -723,6 +894,9 @@ function viewToday(away){
   var opts=outfits(a);
   if(S.opt>=opts.length) S.opt=0;
   var o=opts[S.opt];
+  var B=bring(a);
+  var bg2=bagFor(a,B,o.items,away);
+  function must(k){return B.some(function(b){return b.k===k&&b.level==='must';});}
   h+='<section class="card"><h2>'+(a.evening?'내일의':'오늘의')+' 코디</h2>';
   h+='<div class="seg" style="grid-template-columns:repeat('+opts.length+',minmax(0,1fr))">'+opts.map(function(x,i){return '<button data-a="opt" data-v="'+i+'" aria-pressed="'+(S.opt===i)+'">'+esc(x.label)+'</button>';}).join('')+'</div>';
   var P=S.plan;
@@ -734,6 +908,7 @@ function viewToday(away){
     h+='<div class="planbox"><span class="xs">'+when+' '+(+P.setH)+'시에 정해 둔 코디 · '+esc(P.label)+'</span><b>'+esc(P.summary)+'</b>'+
        '<span class="small">'+(changes.length?'그 사이 예보가 바뀌었어요: '+esc(changes.join(', '))+'. 아래 추천을 다시 확인해 보세요.':'예보가 그대로예요. 정한 대로 입으시면 돼요.')+'</span></div>';
   }
+  h+='<div class="look">'+figure(o.items,{umbrella:must('umbrella'),sun:must('sunglass'),bag:bg2.ic})+'<span class="cap">예시 그림 · 색은 옷 이름 기준이에요</span></div>';
   h+='<div class="small">'+esc(o.desc)+'</div><div class="items">';
   o.items.forEach(function(it){
     h+='<div class="item"><div style="display:flex;flex-direction:column;min-width:0"><span class="xs muted">'+esc(it.part)+'</span><span class="name">'+esc(it.name)+'</span></div>'+
@@ -751,7 +926,6 @@ function viewToday(away){
   h+='</section>';
 
   // 챙길 것
-  var B=bring(a);
   h+='<section class="card"><h2>챙길 것</h2><div class="bring">'+B.map(function(b){
     return '<div class="b '+(b.level==='must'?'must':'')+'"><span class="bt">'+esc(b.name)+' · '+levelText(b.level)+'</span><span class="bn">'+esc(b.note)+'</span></div>';
   }).join('')+'</div></section>';
@@ -764,7 +938,6 @@ function viewToday(away){
   }
 
   // 가방
-  var bg2=bagFor(a,B,o.items,away);
   h+='<section class="card"><div class="bag"><div class="bagicon">'+icon(bg2.ic,28)+'</div><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="xs muted">'+(a.evening?'내일의':'오늘의')+' 가방</span><span style="font-weight:700">'+esc(bg2.name)+'</span><span class="small">'+esc(bg2.text)+'</span></div></div></section>';
 
   var off=fbOffset()+SENS[S.sens].v;
